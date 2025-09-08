@@ -1,14 +1,14 @@
 -module(reftr_refact_spawn).
 -vsn("$Rev$").
 
-
 -export([prepare/1, error_text/2]).
 
 -include("user.hrl").
 
 %%% ============================================================================
-%%% Transformations
+%%% Callbacks
 
+%%% @private
 prepare(Args) ->      %Args: module, range
     App = ?Args:expr_range(Args),
     File = ?Args:file(Args),
@@ -32,6 +32,7 @@ prepare(Args) ->      %Args: module, range
     end
 .
 
+%% Calls the appropriate function depending on the functions name
 call_approp_function(App, File) ->
     ?d(App),
     Function = ?Query:exec1(App, ?Expr:function(), error),
@@ -40,9 +41,10 @@ call_approp_function(App, File) ->
     ?d(Name),
     case Name of
         spawn -> transform_spawn_to_spawn_link(App);
-        list_to_atom -> check_arg_type(App, File);
         binary_to_atom -> transform_binary_to_existing_atom(App);
         binary_to_term -> transform_binary_to_term_safe(App);
+        %list_to_atom -> transform_list_to_existing_atom(App);
+        list_to_atom -> check_arg_type(App, File);
         list_to_existing_atom -> throw(?LocalError(already_safe, [list_to_existing_atom]));
         binary_to_existing_atom -> throw(?LocalError(already_safe, [binary_to_existing_atom]));
         _ -> ?LocalError(no_transformation, [Name])
@@ -51,8 +53,9 @@ call_approp_function(App, File) ->
 
 
 %%% ============================================================================
-%%% Transform spawn to spawn_link
+%%% Preventing atom exhaustion (Transformation)
 
+%% Transforms the spawn function to spawn_link, and removes the associated link function
 transform_spawn_to_spawn_link(App) ->
     [{_, SpawnAppParent}] = ?Syn:parent(App),
     ReachList = reflib_dataflow:reach(App),
@@ -81,10 +84,7 @@ transform_spawn_to_spawn_link(App) ->
     end]
 .
 
-
-%%% ============================================================================
-%%% Preventing atom exhaustion
-
+%% Transforms the binary_to_atom function to binary_to_existing_atom
 transform_binary_to_existing_atom(App) ->
     [{_, AppParent}] = ?Syn:parent(App),
     Args = ?Query:exec1(App, ?Expr:child(2), error),
@@ -97,6 +97,7 @@ transform_binary_to_existing_atom(App) ->
     end]
 .
 
+%% Transforms the list_to_atom function to list_to_existing_atom
 transform_list_to_existing_atom(App) ->
     [{_, AppParent}] = ?Syn:parent(App),
     Args = ?Query:exec1(App, ?Expr:child(2), error),
@@ -109,6 +110,7 @@ transform_list_to_existing_atom(App) ->
     end]
 .
 
+%% Transform the binary_to_term function with adding a new 'safe' argument
 transform_binary_to_term_safe(App) ->
     [{_, AppParent}] = ?Syn:parent(App),
     ArgList = ?Query:exec1(App, ?Expr:child(2), error),
@@ -133,15 +135,16 @@ transform_binary_to_term_safe(App) ->
 
 
 %%% ============================================================================
-%%% Untrusted argument check
+%%% Untrusted argument sanitize
 
+%% Checks the untrusted function argumentum type
 check_arg_type(App, File) ->
     ?d("----- check_arg_type -----"),
     ?d(App),
     Arg = ?Query:exec1(?Query:exec1(App, ?Expr:child(2), error), ?Expr:child(1), error),
     ?d(Arg),
     ?d(?Expr:type(Arg)),
-    case ?Expr:type(Arg) of %TODO
+    case ?Expr:type(Arg) of 
         infix_expr -> 
             case_of_infix_expr_arg(App, File, Arg);
         application -> % t2.erl | t6.erl | t7.erl | t8.erl | t9.erl | t10.erl | t11.erl | t12.erl
@@ -156,6 +159,7 @@ check_arg_type(App, File) ->
     end
 .
 
+%% If the untrusted argument is an infix expression
 case_of_infix_expr_arg(App, File, Arg) ->
     ?d("----- case_of_infix_expr_arg -----"),
     Ch1 = ?Query:exec1(Arg, ?Expr:child(1), error),
@@ -292,6 +296,7 @@ case_of_infix_expr_arg(App, File, Arg) ->
 .
 
 % t2.erl | t6.erl | t7.erl | t8.erl | t9.erl | t10.erl | t11.erl | t12.erl
+%% If the untrusted argument is an application
 case_of_application_arg(App, File, Arg) ->
     ?d("----- case_of_application_arg -----"),
     ChOfArg = ?Query:exec1(Arg, ?Expr:child(2), error),
@@ -352,7 +357,9 @@ case_of_application_arg(App, File, Arg) ->
         _ -> throw(?LocalError(replacable, []))
     end
 .
+
 % t2.erl | t6.erl | t7.erl | t8.erl | t9.erl | t10.erl | t11.erl | t12.erl
+%% If the untrusted argument is a variable inside an application
 handle_variable_inside_application(App, File, Child) ->
     case ?Expr:role(Child) of
         expr ->
@@ -394,6 +401,7 @@ handle_variable_inside_application(App, File, Child) ->
 
 
 % t3.erl | t5.erl | t13.erl | t14.erl 
+%% If the untrusted argument is a variable
 case_of_variable_arg(App, File, Arg) ->
     ?d("----- case_of_variable_arg -----"),
     VarFlow = ?Query:exec1(Arg, reflib_dataflow:flow_back(), error),
@@ -500,7 +508,8 @@ case_of_variable_arg(App, File, Arg) ->
     end
 .
 
-%%% Sanitize function
+%%% ============================================================================
+%%% Sanitize
 
 list_to_atom_sanitize(App, File, UntrustedArg)->
     ?d("--- SANITIZE ---"),
@@ -560,20 +569,14 @@ form_index(File, Form) ->
     end
 .
 
-check_children_number(Node) ->
-    List = ?Query:exec(Node, ?Expr:children()),
-    length(List)
-.
-
 
 %%% ============================================================================
 %%% Checks
 
-% cc_valid_cond(Condition) ->
-%     ?Check(not (lists:member(hd("="), Condition) orelse lists:member(hd("<"), Condition)), ?RefError(not_a_condition, Condition)),
-%     Condition.
-% cc_error(?RefError(empty_condition, _), _, _) ->
-%     ?MISC:format("The given text is empty.").
+check_children_number(Node) ->
+    List = ?Query:exec(Node, ?Expr:children()),
+    length(List)
+.
 
 
 %%% ============================================================================
