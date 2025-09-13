@@ -6,19 +6,22 @@
 	- ri:svg().		| Making a graph out of the test file
 	- ri:build().		| Rebuilds all the modules, just to make sure everything is up to date
 4) Run one of the command for testing the refactoring function. All range are given properly, unless you change the test file content.
-	- ri:refact_spawn(lta_t2,{56,67}).
-	- ri:refact_spawn(lta_t3,{52,63}).
-	- ri:refact_spawn(lta_t5,{82,93}).
-	- ri:refact_spawn(lta_t6,{52,63}).
-	- ri:refact_spawn(lta_t7,{43,54}).
-	- ri:refact_spawn(lta_t8,{51,62}).
-	- ri:refact_spawn(lta_t9,{59,70}).
-	- ri:refact_spawn(lta_t10,{51,62}).
-	- ri:refact_spawn(lta_t11,{44,55}).
-	- ri:refact_spawn(lta_t12,{44,55}).
-	- ri:refact_spawn(lta_t13,{91,102}).
-	- ri:refact_spawn(lta_t14,{91,102}).
-	- ri:refact_spawn(exh_t1,{54,65}).
-	- ri:refact_spawn(exh_t2,{53,66}).
-	- ri:refact_spawn(exh_t3,{86,99}).
-	- ri:refact_spawn(exh_t4,{86,99}).
+	- ri:refact_sanitize(lta_t1,{55,66}).
+	- ri:refact_sanitize(lta_t2,{56,67}).
+	- ri:refact_sanitize(lta_t3,{52,63}).
+	- ri:refact_sanitize(lta_t5,{82,93}).
+	- ri:refact_sanitize(lta_t6,{52,63}).
+	- ri:refact_sanitize(lta_t7,{43,54}).
+	- ri:refact_sanitize(lta_t8,{51,62}).
+	- ri:refact_sanitize(lta_t9,{59,70}).
+	- ri:refact_sanitize(lta_t10,{51,62}).
+	- ri:refact_sanitize(lta_t11,{44,55}).
+	- ri:refact_sanitize(lta_t12,{44,55}).
+	- ri:refact_sanitize(lta_t13,{91,102}).
+	- ri:refact_sanitize(lta_t14,{91,102}).
+	- ri:refact_sanitize(lta_t16,{50,51}).
+	- ri:refact_atom_exh(exh_t1,{54,65}).
+	- ri:refact_atom_exh(exh_t2,{53,66}).
+	- ri:refact_atom_exh(exh_t3,{86,99}).
+	- ri:refact_atom_exh(exh_t4,{86,99}).
+	- ri:refact_atom_exh(exh_t5,{56,60}).
