@@ -76,6 +76,7 @@ check_arg_type(App, File) ->
     end
 .
 
+% t1.erl | t15.erl |
 %% If the untrusted argument is an infix expression
 case_of_infix_expr_arg(App, File, Arg) ->
     ?d("----- case_of_infix_expr_arg -----"),
@@ -85,96 +86,47 @@ case_of_infix_expr_arg(App, File, Arg) ->
     ?d(Ch2),
     ?d(?Expr:type(Ch1)),
     ?d(?Expr:type(Ch2)),
-    case ?Expr:type(Ch1) of
+    case lists:member(?Expr:type(Ch1), [application, cons, variable]) of
+        true -> case_of_infix_expr_child(App, File, Ch1);
+        false -> ok
+    end
+    %?d("-- CH2 --")
+    % case lists:member(?Expr:type(Ch2), [application, cons, variable]) of
+    %     true -> case_of_infix_expr_child(App, File, Ch2);
+    %     false -> ok
+    % end
+.
+
+case_of_infix_expr_child(App, File, Child) ->
+    case ?Expr:type(Child) of
         application -> 
-            Ch1AppArg = ?Query:exec1(?Query:exec1(Ch1, ?Expr:child(2), error), ?Expr:child(1), error),
-            ?d(Ch1AppArg),
-            case ?Expr:type(Ch1AppArg) of
+            ChildAppArg = ?Query:exec1(?Query:exec1(Child, ?Expr:child(2), error), ?Expr:child(1), error),
+            ?d(ChildAppArg),
+            case ?Expr:type(ChildAppArg) of
                 variable -> 
-                    handle_variable_inside_application(App, File, Ch1AppArg);
-                _ -> throw(?LocalError(replacable, []))
-            end;
-        cons -> 
-            case check_children_number(Ch1) of
-                1 -> ok;
-                _ -> throw(?LocalError(replacable, []))
-            end,
-            DoubleCheckCh1 = ?Query:exec1(Ch1, ?Expr:child(1), error),
-            ?d(DoubleCheckCh1),
-            ?d(?Expr:type(DoubleCheckCh1)),
-            case ?Expr:type(DoubleCheckCh1) of
-                list -> ok;
-                _ -> throw(?LocalError(replacable, []))
-            end,
-            case check_children_number(DoubleCheckCh1) of
-                1 -> ok;
-                _ -> throw(?LocalError(replacable, []))
-            end,
-            ConsCh1 = ?Query:exec1(DoubleCheckCh1, ?Expr:child(1), error),     % UntrustedArg
-            ?d(ConsCh1),
-            list_to_atom_sanitize(App, File, ConsCh1);
-        variable -> %??????
-            Ch1PatternFlow =  ?Query:exec1(?Query:exec1(Ch1, reflib_dataflow:flow_back(), error),reflib_dataflow:flow_back(), error),
-            Ch1ReachList = ?Dataflow:reach_1st([Ch1PatternFlow], [{back, true}]),
-            ?d(Ch1ReachList);
-
-
-            % case ?Expr:role(Ch1) of
-            %     expr ->
-            %         list_to_atom_sanitize(App, File, Ch1);
-            %     _ -> throw(?LocalError(replacable, []))
-            % end;
-
-
-            % Ch1VarPattern = ?Query:exec1(Ch1, reflib_dataflow:flow_back(), error),
-            % ?d(Ch1VarPattern),
-            % Ch1ReachList = ?Dataflow:reach_1st([Ch1VarPattern], [{back, true}]),
-            % ?d(Ch1ReachList),
-            % Ch1OutsideCons = lists:filter(fun(E) -> ?Expr:type(E) == cons end, Ch1ReachList),
-            % ?d(Ch1OutsideCons),
-            % case length(Ch1OutsideCons) of
-            %     1 -> case check_children_number(Ch1OutsideCons) of
-            %             % HIBA: --------------------- t1.erl ---------------------
-            %             1 -> list_to_atom_sanitize(App, File, hd(Ch1OutsideCons));      
-            %             _ -> throw(?LocalError(replacable, []))
-            %         end;
-            %     _ -> throw(?LocalError(replacable, []))
-            % end;
-            %-----
-            % Ch1VarPattern = ?Query:exec1(Ch1, reflib_dataflow:flow_back(), error),
-            % ?d(Ch1VarPattern),
-            % list_to_atom_sanitize(App, File, Ch1VarPattern);
-        _ -> ok
-    end,
-    case ?Expr:type(Ch2) of
-        application -> 
-            Ch2AppArg = ?Query:exec1(?Query:exec1(Ch2, ?Expr:child(2), error), ?Expr:child(1), error),
-            ?d(Ch2AppArg),
-            case ?Expr:type(Ch2AppArg) of
-                variable -> 
-                    handle_variable_inside_application(App, File, Ch2AppArg);
+                    handle_variable_inside_application(App, File, ChildAppArg);
                 _ -> throw(?LocalError(replacable, []))
             end
         ;
         cons -> 
-            case check_children_number(Ch1) of
+            case check_children_number(Child) of
                 1 -> ok;
                 _ -> throw(?LocalError(replacable, []))
             end,
-            DoubleCheckCh2 = ?Query:exec1(Ch1, ?Expr:child(1), error),
-            ?d(DoubleCheckCh2),
-            ?d(?Expr:type(DoubleCheckCh2)),
-            case ?Expr:type(DoubleCheckCh2) of
+            DoubleCheckChild = ?Query:exec1(Child, ?Expr:child(1), error),
+            ?d(DoubleCheckChild),
+            ?d(?Expr:type(DoubleCheckChild)),
+            case ?Expr:type(DoubleCheckChild) of
                 list -> ok;
                 _ -> throw(?LocalError(replacable, []))
             end,
-            case check_children_number(DoubleCheckCh2) of
+            case check_children_number(DoubleCheckChild) of
                 1 -> ok;
                 _ -> throw(?LocalError(replacable, []))
             end,
-            ConsCh2 = ?Query:exec1(DoubleCheckCh2, ?Expr:child(1), error),     % UntrustedArg
-            ?d(ConsCh2),
-            list_to_atom_sanitize(App, File, ConsCh2);
+            ConsChild = ?Query:exec1(DoubleCheckChild, ?Expr:child(1), error),     % UntrustedArg
+            ?d(ConsChild),
+            list_to_atom_sanitize(App, File, ConsChild);
         variable -> %??????
             % Ch2VarPattern = ?Query:exec1(Ch2, reflib_dataflow:flow_back(), error),
             % ?d(Ch2VarPattern),
@@ -262,7 +214,7 @@ case_of_application_arg(App, File, Arg) ->
     end
 .
 
-% t2.erl | t6.erl | t7.erl | t8.erl | t9.erl | t10.erl | t11.erl | t12.erl
+% t2.erl | t6.erl | t7.erl | t8.erl | t9.erl | t10.erl | t11.erl | t12.erl | t1.erl | t15.erl
 %% If the untrusted argument is a variable inside an application
 handle_variable_inside_application(App, File, Child) ->
     ?d("----- handle_variable_inside_application -----"),
@@ -365,7 +317,7 @@ case_of_variable_arg(App, File, Arg) ->
                         _ -> throw(?LocalError(replacable, []))
                     end
             end;
-        0 -> % --------------------- t13.erl | t14.erl ---------------------
+        0 -> % --------------------- t13.erl | t14.erl | t16.erl ---------------------
             case ?Expr:role(VarFlow) of
                 pattern ->
                     ExprClause = ?Query:exec1(VarFlow, ?Expr:clause(), error),
@@ -405,7 +357,7 @@ case_of_variable_arg(App, File, Arg) ->
                                     end;
                                 _ -> throw(?LocalError(replacable, []))
                             end;
-                        fundef -> list_to_atom_sanitize(App, File, Arg);
+                        fundef -> list_to_atom_sanitize(App, File, Arg); % t16.erl
                         _ -> throw(?LocalError(replacable, []))
                     end;
                 _ -> throw(?LocalError(replacable, []))
@@ -459,7 +411,6 @@ list_to_atom_sanitize(App, File, UntrustedArg)->
                                            ?Clause:form()]),
                         error),
         FormIndex = form_index(File, LastForm),
-        ?d(FormIndex),
         ?Syn:replace(AppParent, {node, App}, [NewCase]),
         ?File:add_form(File, FormIndex + 1, SanitizeFuncForm),
         
@@ -497,6 +448,6 @@ error_text(already_safe, [Name]) ->
 error_text(no_variable, []) ->
     ?MISC:format("No matching variable.");
 error_text(criteria_not_met, []) ->
-    ?MISC:format("Variable criteria not met", []);
+    ?MISC:format("Variable criteria not met.", []);
 error_text(replacable, []) ->
     ?MISC:format("REPLACE", []).
