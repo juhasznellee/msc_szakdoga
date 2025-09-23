@@ -58,22 +58,34 @@ prepare(Args) ->      %Args: module, range
 check_arg_type(App, File) ->
     ?d("----- check_arg_type -----"),
     ?d(App),
-    Arg = ?Query:exec1(?Query:exec1(App, ?Expr:child(2), error), ?Expr:child(1), error),
-    ?d(Arg),
-    ?d(?Expr:type(Arg)),
-    case ?Expr:type(Arg) of 
-        infix_expr -> 
-            case_of_infix_expr_arg(App, File, Arg);
-        application -> % t2.erl | t6.erl | t7.erl | t8.erl | t9.erl | t10.erl | t11.erl | t12.erl
-            case_of_application_arg(App, File, Arg);
-        variable -> % t3.erl | t5.erl | t13.erl | t14.erl
-            case_of_variable_arg(App, File, Arg);
-        string -> 
-            ok;
-        integer ->
-            ok;
-        _ -> throw(?LocalError(replacable, []))
-    end
+    Function = ?Query:exec1(App, ?Expr:function(), error),
+    ?d(Function),
+    Name = ?Fun:name(Function),
+    ?d(Name),
+    case Name of
+        list_to_atom ->
+            Arg = ?Query:exec1(?Query:exec1(App, ?Expr:child(2), error), ?Expr:child(1), error),
+            ?d(Arg),
+            ?d(?Expr:type(Arg)),
+            case ?Expr:type(Arg) of 
+                infix_expr -> 
+                    case_of_infix_expr_arg(App, File, Arg);
+                application -> % t2.erl | t6.erl | t7.erl | t8.erl | t9.erl | t10.erl | t11.erl | t12.erl
+                    case_of_application_arg(App, File, Arg);
+                variable -> % t3.erl | t5.erl | t13.erl | t14.erl
+                    case_of_variable_arg(App, File, Arg);
+                string -> 
+                    ok;
+                integer ->
+                    ok;
+                _ -> throw(?LocalError(replacable, []))
+            end;
+        cmd ->
+            Arg = ?Query:exec1(?Query:exec1(App, ?Expr:child(2), error), ?Expr:child(1), error),
+            ?d(Arg),
+            cmd_sanitize(App, File, Arg);
+        _ -> ?LocalError(no_transformation, [Name])
+    end   
 .
 
 % t1.erl | t15.erl |
@@ -369,47 +381,42 @@ case_of_variable_arg(App, File, Arg) ->
 %%% ============================================================================
 %%% Sanitize
 
-list_to_atom_sanitize(App, File, UntrustedArg)->
+cmd_sanitize(App, File, UntrustedArg) -> ?d(App).
+
+list_to_atom_sanitize(App, File, UntrustedArg) ->
     ?d("--- SANITIZE ---"),
     [{_, AppParent}] = ?Syn:parent(App),
     [fun() ->
         %--- CRIT CHECK
-        CaseSanitizeAtom = ?Syn:construct({atom, sanitize}),
         {_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
         CaseSanitizeArgList = ?Syn:create(#expr{type=arglist}, [{esub, CaseSanitizeArg}]),
-        CaseSanitizeApp = ?Syn:create(#expr{type = application}, [{esub, [CaseSanitizeAtom]},{esub, CaseSanitizeArgList}]),
+        CaseSanitizeApp = ?Syn:create(#expr{type = application}, [{esub, [?Syn:construct({atom, sanitize})]}, {esub, CaseSanitizeArgList}]),
 
         %--- CASE - TRUE
         {_ , TrueListToAtomPart} = lists:keyfind(App, 1, ?Syn:copy(App)),
-        TrueAtom = ?Syn:construct({atom, true}),
-        TrueSanitizePattern = ?Syn:construct({pattern, [TrueAtom], [], [TrueListToAtomPart]}),
+        TrueSanitizePattern = ?Syn:construct({pattern, [{atom, true}], [], [TrueListToAtomPart]}),
 
         %--- CASE - FALSE
-        ThrowArg = ?Syn:construct({string, "Variable criteria not met"}),
-        ThrowArgList = ?Syn:create(#expr{type=arglist}, [{esub,ThrowArg}]),
-        ThrowAtom = ?Syn:construct({atom, throw}),
-        ThrowApp = ?Syn:create(#expr{type = application}, [{esub, [ThrowAtom]},{esub, ThrowArgList}]),
-        FalseAtom = ?Syn:construct({atom, false}),
-        FalseSanitizePattern = ?Syn:construct({pattern, [FalseAtom], [], [ThrowApp]}),
+        ThrowArgList = ?Syn:create(#expr{type=arglist}, [{esub, ?Syn:construct({string, "Variable criteria not met"})}]),
+        ThrowApp = ?Syn:create(#expr{type = application}, [{esub, [?Syn:construct({atom, throw})]},{esub, ThrowArgList}]),
+        FalseSanitizePattern = ?Syn:construct({pattern, [{atom, false}], [], [ThrowApp]}),
 
         %--- CASE
         NewCase = ?Syn:construct({'case', CaseSanitizeApp, [TrueSanitizePattern, FalseSanitizePattern]}),
 
         %--- SANITIZE FUNCTION
-        SanitizeFuncAtom = ?Syn:construct({atom, sanitize}),
-        SanitizeFuncPattern = ?Syn:construct({var_pattern, "X"}),
-        SanitizeFuncLeftAtom = ?Syn:construct({atom, length}),
-        SanitizeFuncLeftVar = ?Syn:construct({var, "X"}),
-        SanitizeFuncLeftArgList = ?Syn:create(#expr{type=arglist}, [{esub,SanitizeFuncLeftVar}]),
-        SanitizeFuncLeft = ?Syn:create(#expr{type = application}, [{esub, [SanitizeFuncLeftAtom]},{esub, SanitizeFuncLeftArgList}]),
+        SanitizeFuncLeftArgList = ?Syn:create(#expr{type=arglist}, [{esub, ?Syn:construct({var, "X"})}]),
+        SanitizeFuncLeft = ?Syn:create(#expr{type = application}, 
+                                [{esub, [?Syn:construct({atom, length})]}, 
+                                {esub, SanitizeFuncLeftArgList}]),
         SanitizeFuncRight = ?Syn:construct({integer, 50}),
-        SanitizeFuncBody = ?Syn:construct({{infix_expr, '<'}, SanitizeFuncLeft, SanitizeFuncRight}),
-        SanitizeFuncClause = ?Syn:construct({fun_clause, [SanitizeFuncAtom], [SanitizeFuncPattern], [], [SanitizeFuncBody]}),
+        SanitizeFuncClause = ?Syn:construct({fun_clause, 
+                                [{atom, sanitize}], 
+                                [{var_pattern, "X"}], 
+                                [], 
+                                [{{infix_expr, '<'}, SanitizeFuncLeft, SanitizeFuncRight}]}),
         SanitizeFuncForm = ?Syn:construct({func, [SanitizeFuncClause]}),
-        LastForm = ?Query:exec1(App, ?Query:seq([?Expr:clause(),
-                                           ?Clause:funcl(),
-                                           ?Clause:form()]),
-                        error),
+        LastForm = ?Query:exec1(App, ?Query:seq([?Expr:clause(), ?Clause:funcl(), ?Clause:form()]), error),
         FormIndex = form_index(File, LastForm),
         ?Syn:replace(AppParent, {node, App}, [NewCase]),
         ?File:add_form(File, FormIndex + 1, SanitizeFuncForm),

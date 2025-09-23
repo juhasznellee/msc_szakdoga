@@ -19,7 +19,7 @@
 	- ri:refact_sanitize(lta_t12,{44,55}).
 	- ri:refact_sanitize(lta_t13,{91,102}).
 	- ri:refact_sanitize(lta_t14,{91,102}).
-	- ri:refact_sanitize(lta_t16,{50,51}).
+	- ri:refact_sanitize(lta_t16,{57,58}).
 	- ri:refact_atom_exh(exh_t1,{54,65}).
 	- ri:refact_atom_exh(exh_t2,{53,66}).
 	- ri:refact_atom_exh(exh_t3,{86,99}).
