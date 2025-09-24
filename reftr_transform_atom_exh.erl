@@ -1,4 +1,4 @@
--module(reftr_refact_atom_exh).
+-module(reftr_transform_atom_exh).
 -vsn("$Rev$").
 
 -export([prepare/1, error_text/2]).

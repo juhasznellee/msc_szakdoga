@@ -1,4 +1,4 @@
--module(reftr_refact_sanitize).
+-module(reftr_transform_list_to_atom).
 -vsn("$Rev$").
 
 -export([prepare/1, error_text/2]).
@@ -80,10 +80,6 @@ check_arg_type(App, File) ->
                     ok;
                 _ -> throw(?LocalError(replacable, []))
             end;
-        cmd ->
-            Arg = ?Query:exec1(?Query:exec1(App, ?Expr:child(2), error), ?Expr:child(1), error),
-            ?d(Arg),
-            cmd_sanitize(App, File, Arg);
         _ -> ?LocalError(no_transformation, [Name])
     end   
 .
@@ -380,62 +376,6 @@ case_of_variable_arg(App, File, Arg) ->
 
 %%% ============================================================================
 %%% Sanitize
-
-cmd_sanitize(App, File, UntrustedArg) -> 
-    ?d("--- SANITIZE CMD ---"),
-    [{_, AppParent}] = ?Syn:parent(App),
-    [fun() ->
-        %--- CRIT CHECK
-        {_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
-        CaseSanitizeArgList = ?Syn:create(#expr{type=arglist}, [{esub, CaseSanitizeArg}]),
-        CaseSanitizeApp = ?Syn:create(#expr{type = application}, 
-                                [{esub, [?Syn:construct({atom, variable_content_check})]}, 
-                                {esub, CaseSanitizeArgList}]),
-
-        %--- CASE - TRUE
-        ThrowArgList = ?Syn:create(#expr{type=arglist}, [{esub, ?Syn:construct({string, "Variable criteria not met"})}]),
-        ThrowApp = ?Syn:create(#expr{type = application}, [{esub, [?Syn:construct({atom, throw})]},{esub, ThrowArgList}]),
-        TrueSanitizePattern = ?Syn:construct({pattern, [{atom, true}], [], [ThrowApp]}),
-
-        %--- CASE - FALSE
-        {_ , TrueListToAtomPart} = lists:keyfind(App, 1, ?Syn:copy(App)),
-        FalseSanitizePattern = ?Syn:construct({pattern, [{atom, false}], [], [TrueListToAtomPart]}),
-
-        %--- CASE
-        NewCase = ?Syn:construct({'case', CaseSanitizeApp, [TrueSanitizePattern, FalseSanitizePattern]}),
-
-        %--- SANITIZE FUNCTION
-        SanitizeInsideAppArgList = ?Syn:create(#expr{type=arglist}, 
-                                [{esub, ?Syn:construct({var, "E"})}, 
-                                {esub, ?Syn:construct({string, "$@#"})}]),
-        SanitizeInsideAppInfixExpr = ?Syn:construct({{infix_expr, ':'}, [{atom, lists}], [{atom, member}]}),
-        SanitizeInsideApp = ?Syn:create(#expr{type = application}, 
-                                [{esub, SanitizeInsideAppInfixExpr}, 
-                                {esub, SanitizeInsideAppArgList}]),
-        SanitizeFunExprScope = ?Syn:construct({fun_scope, [{var_pattern, "E"}], [], [SanitizeInsideApp]}),
-        SanitizeFunExpr = ?Syn:construct({'fun', [SanitizeFunExprScope]}),
-        SanitizeOutsideAppArgList = ?Syn:create(#expr{type=arglist}, 
-                                [{esub, SanitizeFunExpr}, 
-                                {esub, ?Syn:construct({var, "X"})}]),
-        SanitizeOutsideAppInfixExpr = ?Syn:construct({{infix_expr, ':'}, [{atom, lists}], [{atom, any}]}),
-        SanitizeOutsideApp = ?Syn:create(#expr{type = application}, 
-                                [{esub, SanitizeOutsideAppInfixExpr}, 
-                                {esub, SanitizeOutsideAppArgList}]),
-        SanitizeFuncClause = ?Syn:construct({fun_clause, 
-                                [{atom, variable_content_check}], 
-                                [{var_pattern, "X"}], 
-                                [], 
-                                [SanitizeOutsideApp]}),
-        SanitizeFuncForm = ?Syn:construct({func, [SanitizeFuncClause]}),
-        
-        LastForm = ?Query:exec1(App, ?Query:seq([?Expr:clause(), ?Clause:funcl(), ?Clause:form()]), error),
-        FormIndex = form_index(File, LastForm),
-        ?Syn:replace(AppParent, {node, App}, [NewCase]),
-        ?File:add_form(File, FormIndex + 1, SanitizeFuncForm),
-        
-        ?Transform:touch(CaseSanitizeArgList)
-    end]
-.
 
 list_to_atom_sanitize(App, File, UntrustedArg) ->
     ?d("--- SANITIZE LIST_TO_ATOM ---"),
