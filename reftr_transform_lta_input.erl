@@ -40,7 +40,7 @@ prepare(Args) ->      %Args: module, range
 %%% Untrusted argument sanitize
 
 
-% t1.erl | t15.erl |
+% t1.erl | t4.erl | t15.erl
 %% If the untrusted argument is an infix expression
 case_of_infix_expr_arg(App, File, Arg) ->
     ?d("----- case_of_infix_expr_arg -----"),
@@ -52,18 +52,17 @@ case_of_infix_expr_arg(App, File, Arg) ->
     ?d(?Expr:type(Ch2)),
     case lists:member(?Expr:type(Ch1), [application, cons, variable]) of
         true -> case_of_infix_expr_child(App, File, Ch1);
-        false -> ok
+        false -> 
+            case lists:member(?Expr:type(Ch2), [application, cons, variable]) of
+                true -> case_of_infix_expr_child(App, File, Ch2);
+                false -> throw(?LocalError(replacable, []))
+            end
     end
-    %?d("-- CH2 --")
-    % case lists:member(?Expr:type(Ch2), [application, cons, variable]) of
-    %     true -> case_of_infix_expr_child(App, File, Ch2);
-    %     false -> ok
-    % end
 .
 
 case_of_infix_expr_child(App, File, Child) ->
     case ?Expr:type(Child) of
-        application -> 
+        application -> % t1.erl
             ChildAppArg = ?Query:exec1(?Query:exec1(Child, ?Expr:child(2), error), ?Expr:child(1), error),
             ?d(ChildAppArg),
             case ?Expr:type(ChildAppArg) of
@@ -72,45 +71,27 @@ case_of_infix_expr_child(App, File, Child) ->
                 _ -> throw(?LocalError(replacable, []))
             end
         ;
-        cons -> 
-            case check_children_number(Child) of
-                1 -> ok;
-                _ -> throw(?LocalError(replacable, []))
-            end,
-            DoubleCheckChild = ?Query:exec1(Child, ?Expr:child(1), error),
-            ?d(DoubleCheckChild),
-            ?d(?Expr:type(DoubleCheckChild)),
-            case ?Expr:type(DoubleCheckChild) of
-                list -> ok;
-                _ -> throw(?LocalError(replacable, []))
-            end,
-            case check_children_number(DoubleCheckChild) of
-                1 -> ok;
-                _ -> throw(?LocalError(replacable, []))
-            end,
-            ConsChild = ?Query:exec1(DoubleCheckChild, ?Expr:child(1), error),     % UntrustedArg
-            ?d(ConsChild),
-            list_to_atom_sanitize(App, File, ConsChild);
-        variable -> %??????
-            % Ch2VarPattern = ?Query:exec1(Ch2, reflib_dataflow:flow_back(), error),
-            % ?d(Ch2VarPattern),
-            % Ch2ReachList = ?Dataflow:reach_1st([Ch2VarPattern], [{back, true}]),
-            % ?d(Ch2ReachList),
-            % Ch2OutsideCons = lists:filter(fun(E) -> ?Expr:type(E) == cons end, Ch2ReachList),
-            % ?d(Ch2OutsideCons),
-            % case length(Ch2OutsideCons) of
-            %     1 -> case check_children_number(Ch2OutsideCons) of
-            %             % HIBA: --------------------- t1.erl ---------------------
-            %             1 -> list_to_atom_sanitize(App, File, hd(Ch2OutsideCons));
-            %             _ -> throw(?LocalError(replacable, []))
-            %         end;
-            %     _ -> throw(?LocalError(replacable, []))
-            % end;
-            %-----
-            % Ch2VarPattern = ?Query:exec1(Ch2, reflib_dataflow:flow_back(), error),
-            % ?d(Ch2VarPattern),
-            % list_to_atom_sanitize(App, File, Ch2VarPattern);
-            ok;
+        cons -> % t15.erl
+            [{_, AppParent}] = ?Syn:parent(App),
+            ?d(AppParent),
+            case ?Clause:is_clause(AppParent) of
+                true ->
+                    ListComp = ?Query:exec(AppParent, ?Clause:clauseof()),
+                    ?d(ListComp),
+                    case length(ListComp) of
+                        1 ->
+                            ListCompWithOList = hd(ListComp),
+                            case ?Expr:type(ListCompWithOList) of
+                                list_comp ->
+                                    list_to_atom_sanitize(ListCompWithOList, File, Child);
+                                _-> list_to_atom_sanitize(App, File, Child)
+                            end;
+                        _ -> list_to_atom_sanitize(App, File, Child)
+                    end;
+                _ -> list_to_atom_sanitize(App, File, Child)
+            end;        
+        variable -> % t4.erl
+            case_of_variable_arg(App, File, Child);
         _ -> ok
     end
 .
@@ -279,7 +260,28 @@ case_of_variable_arg(App, File, Arg) ->
                                 _ -> throw(?LocalError(replacable, []))
                             end;
                         _ -> throw(?LocalError(replacable, []))
-                    end
+                    end;
+                cons -> % --------------------- t4.erl ---------------------
+                    [{_, AppParent}] = ?Syn:parent(App),
+                    ?d(AppParent),
+                    case ?Clause:is_clause(AppParent) of
+                        true ->
+                            ListComp = ?Query:exec(AppParent, ?Clause:clauseof()),
+                            ?d(ListComp),
+                            case length(ListComp) of
+                                1 ->
+                                    ListCompWithOList = hd(ListComp),
+                                    case ?Expr:type(ListCompWithOList) of
+                                        list_comp ->
+                                            list_to_atom_sanitize(ListCompWithOList, File, VarDepsWithOList);
+                                        _-> list_to_atom_sanitize(App, File, VarDepsWithOList)
+                                    end;
+                                _ -> list_to_atom_sanitize(App, File, VarDepsWithOList)
+                            end;
+                        _ -> list_to_atom_sanitize(App, File, VarDepsWithOList)
+                    end;
+                _ -> 
+                    throw(?LocalError(replacable, []))
             end;
         0 -> % --------------------- t13.erl | t14.erl | t16.erl ---------------------
             case ?Expr:role(VarFlow) of
