@@ -18,15 +18,16 @@
 	ri:transform_lta_input(lta_t10,{51,62}).
 	ri:transform_lta_input(lta_t11,{44,55}).
 	ri:transform_lta_input(lta_t12,{44,55}).
-	ri:transform_lta_input(lta_t13,{91,102}).
-	ri:transform_lta_input(lta_t14,{91,102}).
-	ri:transform_lta_input(lta_t15,{63,74}). 
+	ri:transform_lta_input(lta_t13,{102,113}).
+	ri:transform_lta_input(lta_t14,{102,113}).
+	ri:transform_lta_input(lta_t15,{60,71}).
+	ri:transform_lta_input(lta_t16,{60,71}).
 	---
 	ri:transform_oscmd_input(oscmd_t1,{59,61}).
 	---
-	ri:transform_atom_exh(fun_rep_t1,{54,65}).
-	ri:transform_atom_exh(fun_rep_t2,{50,63}).
-	ri:transform_atom_exh(fun_rep_t3,{86,99}).
-	ri:transform_atom_exh(fun_rep_t4,{86,99}).
+	ri:transform_fun_replacement(fun_rep_t1,{54,65}).
+	ri:transform_fun_replacement(fun_rep_t2,{50,63}).
+	ri:transform_fun_replacement(fun_rep_t3,{86,99}).
+	ri:transform_fun_replacement(fun_rep_t4,{86,99}).
 	---
 	ri:transform_spawn_link_err_handle(spawn_link_test,{56,60}).

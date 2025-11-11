@@ -8,15 +8,11 @@
 %%% @private
 prepare(Args) ->      %Args: module, range
     {App, File} = reftr_transform_common:get_application(Args),
-    ?d(App),
     Function = ?Query:exec1(App, ?Expr:function(), error),
-    ?d(Function),
     Name = ?Fun:name(Function),
-    ?d(Name),
     case Name of
         cmd ->
             Arg = ?Query:exec1(?Query:exec1(App, ?Expr:child(2), error), ?Expr:child(1), error),
-            ?d(Arg),
             cmd_input_sanitize(App, File, Arg);
         _ -> ?LocalError(no_transformation, [Name])
     end
@@ -28,6 +24,7 @@ prepare(Args) ->      %Args: module, range
 cmd_input_sanitize(App, File, UntrustedArg) -> 
     ?d("--- SANITIZE CMD ---"),
     [{_, AppParent}] = ?Syn:parent(App),
+    CheckFunExists = exists_check_function(File),
     [fun() ->
         %--- CRIT CHECK
         {_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
@@ -50,49 +47,54 @@ cmd_input_sanitize(App, File, UntrustedArg) ->
 
         %--- SANITIZE FUNCTION
         SanitizeForbiddenParams = ?Syn:construct({cons, {list, [{string, ";"}, {string, "&&"}, {string, "|"}]}}),
-        ?d(SanitizeForbiddenParams),
         FunExprScopeBodyEsub1AppInfixExpr = ?Syn:construct({{infix_expr, ':'}, [{atom, string}], [{atom, find}]}),
-        ?d(FunExprScopeBodyEsub1AppInfixExpr),
         FunExprScopeBodyEsub1AppArglist = ?Syn:create(#expr{type=arglist}, 
                                 [{esub, ?Syn:construct({var, "X"})}, 
                                 {esub, ?Syn:construct({var, "E"})}]),
-        ?d(FunExprScopeBodyEsub1AppArglist),
         FunExprScopeBodyEsub1App = ?Syn:create(#expr{type = application}, 
                                 [{esub, FunExprScopeBodyEsub1AppInfixExpr}, 
                                 {esub, FunExprScopeBodyEsub1AppArglist}]),
-        ?d(FunExprScopeBodyEsub1App),
         SanitizeOutsideFunExprScopeBody = ?Syn:construct({{infix_expr, '=/='}, [FunExprScopeBodyEsub1App], [{atom, nomatch}]}),
-        ?d(SanitizeOutsideFunExprScopeBody),
         SanitizeOutsideFunExprScope = ?Syn:construct({fun_scope, [{var_pattern, "E"}], [], [SanitizeOutsideFunExprScopeBody]}),
-        ?d(SanitizeOutsideFunExprScope),
         SanitizeOutsideFunExpr = ?Syn:construct({'fun', [SanitizeOutsideFunExprScope]}),
-        ?d(SanitizeOutsideFunExpr),
         SanitizeOutsideAppArgList = ?Syn:create(#expr{type=arglist}, 
                                 [{esub, SanitizeOutsideFunExpr}, 
-                                {esub, SanitizeForbiddenParams}]),
-        ?d(SanitizeOutsideAppArgList),                        
+                                {esub, SanitizeForbiddenParams}]),                    
         SanitizeOutsideAppInfixExpr = ?Syn:construct({{infix_expr, ':'}, [{atom, lists}], [{atom, any}]}),
-        ?d(SanitizeOutsideAppInfixExpr),
         SanitizeOutsideApp = ?Syn:create(#expr{type = application}, 
                                 [{esub, SanitizeOutsideAppInfixExpr}, 
                                 {esub, SanitizeOutsideAppArgList}]),
-        ?d(SanitizeOutsideApp),
         SanitizeFuncClause = ?Syn:construct({fun_clause, 
                                 [{atom, check_input}], 
                                 [{var_pattern, "X"}], 
                                 [], 
                                 [SanitizeOutsideApp]}),
-        ?d(SanitizeFuncClause),
         SanitizeFuncForm = ?Syn:construct({func, [SanitizeFuncClause]}),
-        ?d(SanitizeFuncForm),
-       
+
         LastForm = ?Query:exec1(App, ?Query:seq([?Expr:clause(), ?Clause:funcl(), ?Clause:form()]), error),
         FormIndex = form_index(File, LastForm),
+
         ?Syn:replace(AppParent, {node, App}, [NewCase]),
-        ?File:add_form(File, FormIndex + 1, SanitizeFuncForm),
-        
+        case CheckFunExists of
+            true -> ok;
+            false ->
+                ?File:add_form(File, FormIndex + 1, SanitizeFuncForm)
+        end,
+
         ?Transform:touch(CaseSanitizeArgList)
     end]
+.
+
+exists_check_function(File) ->
+    Forms = ?Query:exec(File, ?File:forms()),
+    FormFunc = lists:map(fun(E) -> ?Query:exec(E, ?Form:func()) end, Forms),
+    Functions = lists:filter(fun(E) -> E /= [] end, FormFunc),
+    FunNames = lists:map(fun(E) -> ?Fun:name(hd(E)) end, Functions),
+    CheckFun = lists:filter(fun(E) -> E == check_input end, FunNames),
+    case length(CheckFun) of
+        0 -> false;
+        _ -> true
+    end
 .
 
 form_index(File, Form) ->

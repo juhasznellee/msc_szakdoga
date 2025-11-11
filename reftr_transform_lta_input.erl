@@ -40,7 +40,7 @@ prepare(Args) ->      %Args: module, range
 %%% Untrusted argument sanitize
 
 
-% t1.erl | t4.erl | t15.erl
+% t1.erl | t4.erl 
 %% If the untrusted argument is an infix expression
 case_of_infix_expr_arg(App, File, Arg) ->
     ?d("----- case_of_infix_expr_arg -----"),
@@ -69,27 +69,10 @@ case_of_infix_expr_child(App, File, Child) ->
                 variable -> 
                     handle_variable_inside_application(App, File, ChildAppArg);
                 _ -> throw(?LocalError(replacable, []))
-            end
-        ;
-        cons -> % t15.erl
-            [{_, AppParent}] = ?Syn:parent(App),
-            ?d(AppParent),
-            case ?Clause:is_clause(AppParent) of
-                true ->
-                    ListComp = ?Query:exec(AppParent, ?Clause:clauseof()),
-                    ?d(ListComp),
-                    case length(ListComp) of
-                        1 ->
-                            ListCompWithOList = hd(ListComp),
-                            case ?Expr:type(ListCompWithOList) of
-                                list_comp ->
-                                    list_to_atom_sanitize(ListCompWithOList, File, Child);
-                                _-> list_to_atom_sanitize(App, File, Child)
-                            end;
-                        _ -> list_to_atom_sanitize(App, File, Child)
-                    end;
-                _ -> list_to_atom_sanitize(App, File, Child)
-            end;        
+            end;
+        cons ->
+            ListCompApp = get_list_comp_part(App),
+            list_to_atom_sanitize(ListCompApp, File, Child);        
         variable -> % t4.erl
             case_of_variable_arg(App, File, Child);
         _ -> ok
@@ -159,42 +142,23 @@ case_of_application_arg(App, File, Arg) ->
     end
 .
 
-% t2.erl | t6.erl | t7.erl | t8.erl | t9.erl | t10.erl | t11.erl | t12.erl | t1.erl | t15.erl
+% t2.erl | t6.erl | t7.erl | t8.erl | t9.erl | t10.erl | t11.erl | t12.erl | t1.erl
 %% If the untrusted argument is a variable inside an application
 handle_variable_inside_application(App, File, Child) ->
     ?d("----- handle_variable_inside_application -----"),
     case ?Expr:role(Child) of
         expr ->
-            Ch1Flow = ?Query:exec1(Child, reflib_dataflow:flow_back(), error),
-            ?d(Ch1Flow),
-            Ch1Deps =  reflib_dataflow:deps(Ch1Flow),   % UntrustedArg
-            ?d(Ch1Deps),
-            case length(Ch1Deps) of
-                1 -> 
-                    case ?Expr:role(hd(Ch1Deps)) of
+            {Length, DepsOrFlow} = get_flow_deps(Child),   % if Length = 0 -> Flow | if Lenght = 1 -> Deps
+            case Length of
+                1 ->
+                    case ?Expr:role(DepsOrFlow) of
                         expr -> 
-                            [{_, AppParent}] = ?Syn:parent(App),
-                            ?d(AppParent),
-                            case ?Clause:is_clause(AppParent) of
-                                true ->
-                                    ListComp = ?Query:exec(AppParent, ?Clause:clauseof()),
-                                    ?d(ListComp),
-                                    case length(ListComp) of
-                                        1 ->
-                                            ListCompWithOList = hd(ListComp),
-                                            case ?Expr:type(ListCompWithOList) of
-                                                list_comp ->
-                                                    list_to_atom_sanitize(ListCompWithOList, File, hd(Ch1Deps));
-                                                _-> list_to_atom_sanitize(App, File, hd(Ch1Deps))
-                                            end;
-                                        _ -> list_to_atom_sanitize(App, File, hd(Ch1Deps))
-                                    end;
-                                _ -> list_to_atom_sanitize(App, File, hd(Ch1Deps))
-                            end;
-                        _ -> throw(?LocalError(replacable, []))
+                            ListCompApp = get_list_comp_part(App),
+                            list_to_atom_sanitize(ListCompApp, File, DepsOrFlow);
+                        _ -> list_to_atom_sanitize(App, File, DepsOrFlow)
                     end;
-                0 -> 
-                    list_to_atom_sanitize(App, File, Child);
+                0 -> % rekurzív külső hívás - t16.erl
+                    find_var_called_by_func(DepsOrFlow, File);
                 _ -> throw(?LocalError(replacable, []))
             end;
         _ -> throw(?LocalError(replacable, []))
@@ -206,37 +170,19 @@ handle_variable_inside_application(App, File, Child) ->
 %% If the untrusted argument is a variable
 case_of_variable_arg(App, File, Arg) ->
     ?d("----- case_of_variable_arg -----"),
-    VarFlow = ?Query:exec1(Arg, reflib_dataflow:flow_back(), error),
-    ?d(VarFlow),
-    VarDeps =  reflib_dataflow:deps(VarFlow),   % UntrustedArg
-    ?d(VarDeps),
-    case length(VarDeps) of
+    {Length, DepsOrFlow} = get_flow_deps(Arg),  % if Length = 0 -> Flow | if Lenght = 1 -> Dep
+    case Length of
         1 -> 
-            VarDepsWithOList = hd(VarDeps),
-            ?d(?Expr:type(VarDepsWithOList)),
-            ?d(?Expr:role(VarDepsWithOList)),
-            case ?Expr:type(VarDepsWithOList) of
+            ?d(?Expr:type(DepsOrFlow)),
+            ?d(?Expr:role(DepsOrFlow)),
+            case ?Expr:type(DepsOrFlow) of
                 variable ->
-                    case ?Expr:role(VarDepsWithOList) of
+                    case ?Expr:role(DepsOrFlow) of
                         expr -> % --------------------- t3.erl ---------------------
-                                [{_, AppParent}] = ?Syn:parent(App),
-                                case ?Clause:is_clause(AppParent) of
-                                    true ->
-                                        ListComp = ?Query:exec(AppParent, ?Clause:clauseof()),
-                                        case length(ListComp) of
-                                            1 ->
-                                                ListCompWithOList = hd(ListComp),
-                                                case ?Expr:type(ListCompWithOList) of
-                                                    list_comp ->
-                                                        list_to_atom_sanitize(ListCompWithOList, File, VarDepsWithOList);
-                                                    _-> list_to_atom_sanitize(App, File, VarDepsWithOList)
-                                                end;
-                                            _ -> list_to_atom_sanitize(App, File, VarDepsWithOList)
-                                        end;
-                                    _ -> list_to_atom_sanitize(App, File, VarDepsWithOList)
-                                end;
+                                ListCompApp = get_list_comp_part(App),
+                                list_to_atom_sanitize(ListCompApp, File, DepsOrFlow);
                         pattern -> % --------------------- t5.erl ---------------------
-                            ExprClause = ?Query:exec1(VarDepsWithOList, ?Expr:clause(), error),
+                            ExprClause = ?Query:exec1(DepsOrFlow, ?Expr:clause(), error),
                             ?d(ExprClause),
                             ?d(?Clause:type(ExprClause)),
                             case ?Clause:type(ExprClause) of
@@ -262,31 +208,14 @@ case_of_variable_arg(App, File, Arg) ->
                         _ -> throw(?LocalError(replacable, []))
                     end;
                 cons -> % --------------------- t4.erl ---------------------
-                    [{_, AppParent}] = ?Syn:parent(App),
-                    ?d(AppParent),
-                    case ?Clause:is_clause(AppParent) of
-                        true ->
-                            ListComp = ?Query:exec(AppParent, ?Clause:clauseof()),
-                            ?d(ListComp),
-                            case length(ListComp) of
-                                1 ->
-                                    ListCompWithOList = hd(ListComp),
-                                    case ?Expr:type(ListCompWithOList) of
-                                        list_comp ->
-                                            list_to_atom_sanitize(ListCompWithOList, File, VarDepsWithOList);
-                                        _-> list_to_atom_sanitize(App, File, VarDepsWithOList)
-                                    end;
-                                _ -> list_to_atom_sanitize(App, File, VarDepsWithOList)
-                            end;
-                        _ -> list_to_atom_sanitize(App, File, VarDepsWithOList)
-                    end;
-                _ -> 
-                    throw(?LocalError(replacable, []))
+                    ListCompApp = get_list_comp_part(App),
+                    list_to_atom_sanitize(ListCompApp, File, DepsOrFlow)
             end;
         0 -> % --------------------- t13.erl | t14.erl | t16.erl ---------------------
-            case ?Expr:role(VarFlow) of
+            ?d(?Expr:type(DepsOrFlow)),
+            case ?Expr:role(DepsOrFlow) of
                 pattern ->
-                    ExprClause = ?Query:exec1(VarFlow, ?Expr:clause(), error),
+                    ExprClause = ?Query:exec1(DepsOrFlow, ?Expr:clause(), error),
                     ?d(ExprClause),
                     ?d(?Clause:type(ExprClause)),
                     case ?Clause:type(ExprClause) of
@@ -323,12 +252,74 @@ case_of_variable_arg(App, File, Arg) ->
                                     end;
                                 _ -> throw(?LocalError(replacable, []))
                             end;
-                        fundef -> list_to_atom_sanitize(App, File, Arg); % t16.erl
+                        fundef -> find_var_called_by_func(DepsOrFlow, File); % t15.erl
+                        pattern -> % t15.erl
+                            % PatternFlow = ?Query:exec1(DepsOrFlow, reflib_dataflow:flow_back(), error),
+                            % ?d(PatternFlow),
+                            %list_to_atom_sanitize(App, File, PatternFlow);
+                            list_to_atom_sanitize(App, File, DepsOrFlow);
                         _ -> throw(?LocalError(replacable, []))
                     end;
                 _ -> throw(?LocalError(replacable, []))
             end;
         _ -> throw(?LocalError(replacable, []))
+    end
+.
+
+find_var_called_by_func(Flow, File) ->
+    NewFunFlow = ?Query:exec1(Flow, reflib_dataflow:flow_back(), error),
+    ?d(NewFunFlow),
+    NewFunVar =  ?Query:exec(NewFunFlow, [{call, back}]),
+    ?d(NewFunVar),
+    NewFunVarWithOList = hd(NewFunVar),
+    case ?Expr:type(NewFunVarWithOList) of
+        variable ->
+            NewApp = ?Query:exec1(?Query:exec1(NewFunVarWithOList, ?Expr:parent(), error), ?Expr:parent(), error),
+            ?d(NewApp),
+            {NewLength, NewDepsOrFlow} = get_flow_deps(NewFunVarWithOList),
+            ?d(NewDepsOrFlow),
+            case NewLength of
+                1 ->
+                    case ?Expr:role(NewDepsOrFlow) of
+                        expr ->
+                            NewListCompApp = get_list_comp_part(NewApp),
+                            list_to_atom_sanitize(NewListCompApp, File, NewDepsOrFlow);
+                        _ -> list_to_atom_sanitize(NewApp, File, NewDepsOrFlow)
+                    end;
+                0 -> find_var_called_by_func(NewDepsOrFlow, File)
+            end;
+        _ -> throw(?LocalError(replacable, []))
+    end
+.
+
+get_flow_deps(Arg) ->
+    Flow = ?Query:exec1(Arg, reflib_dataflow:flow_back(), error),
+    ?d(Flow),
+    DepsList = reflib_dataflow:deps(Flow),
+    ?d(DepsList),
+    case length(DepsList) of
+        1 -> {1, hd(DepsList)};
+        0 -> {0, Flow}
+    end
+.
+
+get_list_comp_part(App) ->
+    [{_, AppParent}] = ?Syn:parent(App),
+    ?d(AppParent),
+    case ?Clause:is_clause(AppParent) of
+        true ->
+            ListComp = ?Query:exec(AppParent, ?Clause:clauseof()),
+            ?d(ListComp),
+            case length(ListComp) of
+                1 ->
+                    ListCompWithOList = hd(ListComp),
+                    case ?Expr:type(ListCompWithOList) of
+                        list_comp -> ListCompWithOList;
+                        _ -> App
+                    end;
+                _ -> App
+            end;
+        _ -> App
     end
 .
 
@@ -338,6 +329,7 @@ case_of_variable_arg(App, File, Arg) ->
 list_to_atom_sanitize(App, File, UntrustedArg) ->
     ?d("--- SANITIZE LIST_TO_ATOM ---"),
     [{_, AppParent}] = ?Syn:parent(App),
+    CheckFunExists = exists_check_function(File),
     [fun() ->
         %--- CRIT CHECK
         {_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
@@ -370,14 +362,31 @@ list_to_atom_sanitize(App, File, UntrustedArg) ->
                                 [], 
                                 [{{infix_expr, '<'}, SanitizeFuncLeft, SanitizeFuncRight}]}),
         SanitizeFuncForm = ?Syn:construct({func, [SanitizeFuncClause]}),
-        
+
         LastForm = ?Query:exec1(App, ?Query:seq([?Expr:clause(), ?Clause:funcl(), ?Clause:form()]), error),
         FormIndex = form_index(File, LastForm),
+
         ?Syn:replace(AppParent, {node, App}, [NewCase]),
-        ?File:add_form(File, FormIndex + 1, SanitizeFuncForm),
-        
+        case CheckFunExists of
+            true -> ok;
+            false ->
+                ?File:add_form(File, FormIndex + 1, SanitizeFuncForm)
+        end,
+
         ?Transform:touch(CaseSanitizeArgList)
     end]
+.
+
+exists_check_function(File) ->
+    Forms = ?Query:exec(File, ?File:forms()),
+    FormFunc = lists:map(fun(E) -> ?Query:exec(E, ?Form:func()) end, Forms),
+    Functions = lists:filter(fun(E) -> E /= [] end, FormFunc),
+    FunNames = lists:map(fun(E) -> ?Fun:name(hd(E)) end, Functions),
+    CheckFun = lists:filter(fun(E) -> E == size_check end, FunNames),
+    case length(CheckFun) of
+        0 -> false;
+        _ -> true
+    end
 .
 
 form_index(File, Form) ->
