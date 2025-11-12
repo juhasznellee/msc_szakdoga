@@ -8,11 +8,11 @@ lists:map(
 
 % TO
 % t() ->
-%     case sanitize([{"id", 1}, {"name", "John"}]) of
+%     case size_check([{"id", 1}, {"name", "John"}]) of
 %         true ->
 %             lists:map(
 %                 fun({KeyStr, Value}) -> {list_to_atom(KeyStr), Value} end,
 %                 [{"id", 1}, {"name", "John"}]);
 %         false -> throw("Variable criteria not met")
 %     end.
-% sanitize(X) -> length(X) < 50.
+% size_check(X) -> length(X) < 50.

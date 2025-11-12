@@ -10,7 +10,7 @@ t() ->
 
 % TO
 % t() ->
-%     case sanitize(lists:seq(1, 25)
+%     case size_check(lists:seq(1, 25)
 %             ) of
 %         true ->
 %             [
@@ -18,4 +18,4 @@ t() ->
 %             ];
 %         false -> throw("Variable criteria not met")
 %     end.
-% sanitize(X) -> length(X) < 50.
+% sansize_checkitize(X) -> length(X) < 50.

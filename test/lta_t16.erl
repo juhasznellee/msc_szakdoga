@@ -2,13 +2,29 @@
 -export([t/1]).
 
 % FROM
-t(Cmd) ->
-    os:cmd(Cmd). 
+t(Module) ->
+    list_to_atom("gr_" ++ atom_to_list(Module)).
+
+asd(Y) ->
+   t(Y)
+.
+
+megtalalni(Xs) ->
+   [asd(X) || X <- Xs]
+.
 
 % TO
-% t(Cmd) ->
-%     case sanitize(Cmd) of
-%         true -> os:cmd(Cmd);
+% t(Module) ->
+%     list_to_atom("gr_" ++ atom_to_list(Module)).
+
+% asd(Y) ->
+%    t(Y)
+% .
+
+% megtalalni(Xs) ->
+%     case size_check(Xs) of
+%         true -> [asd(X) || X<-Xs]
+%         ;
 %         false -> throw("Variable criteria not met")
 %     end.
-% sanitize(X) -> length(X) < 50.
+% size_check(X) -> length(X) < 50.

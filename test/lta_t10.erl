@@ -6,9 +6,4 @@ t(XS) ->
    list_to_atom(lists:append(XS, "ASD")).
 
 % TO
-% t(XS) ->
-%     case sanitize(XS) of
-%         true -> list_to_atom(lists:append(XS, "ASD"));
-%         false -> throw("Variable criteria not met")
-%     end.
-% sanitize(X) -> length(X) < 50.
+%"Function call not found."
