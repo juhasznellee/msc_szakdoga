@@ -26,9 +26,9 @@ prepare(Args) ->      %Args: module, range
                 variable -> % t3.erl | t5.erl | t13.erl | t14.erl
                     case_of_variable_arg(App, File, Arg);
                 string -> 
-                    ok;
+                    throw(?LocalError(no_multi_atom_gen, []));
                 integer ->
-                    ok;
+                    throw(?LocalError(no_multi_atom_gen, []));
                 _ -> throw(?LocalError(replacable, []))
             end;
         _ -> ?LocalError(no_transformation, [Name])
@@ -89,56 +89,39 @@ case_of_application_arg(App, File, Arg) ->
         1 -> % --------------------- t2.erl | t8.erl | t10.erl | t11.erl ---------------------
             Ch1 = ?Query:exec1(ChOfArg, ?Expr:child(1), error),
             ?d(Ch1),
-            case ?Expr:type(Ch1) of
-                variable -> 
-                    handle_variable_inside_application(App, File, Ch1);
-                application -> 
-                    case_of_application_arg(App, File, Ch1);
-                parenthesis -> % Plusz zárójel, de csak 1 arg - annál több nem lehet, hiba
-                    case check_children_number(Ch1) of
-                        1 -> 
-                            NextChild1 = ?Query:exec1(Ch1, ?Expr:child(1), error),
-                            handle_variable_inside_application(App, File, NextChild1);
-                        _ -> throw(?LocalError(replacable, [])) 
-                    end;
-                _ -> throw(?LocalError(replacable, []))
-            end;
+            case_of_application_child(App, File, Ch1);
         2 -> % --------------------- t6.erl | t7.erl | t9.erl | t12.erl ---------------------
             Ch1 = ?Query:exec1(?Query:exec1(Arg, ?Expr:child(2), error), ?Expr:child(1), error),
             ?d(Ch1),
             Ch2 = ?Query:exec1(?Query:exec1(Arg, ?Expr:child(2), error), ?Expr:child(2), error),
             ?d(Ch2),
-            ?d(?Expr:type(Ch1)),
-            case ?Expr:type(Ch1) of
-                variable ->
-                    handle_variable_inside_application(App, File, Ch1);
-                application -> 
-                    case_of_application_arg(App, File, Ch1);
-                parenthesis -> % Plusz zárójel, de csak 1 arg - annál több nem lehet, hiba
-                    case check_children_number(Ch1) of
-                        1 -> 
-                            NextChild1 = ?Query:exec1(Ch1, ?Expr:child(1), error),
-                            handle_variable_inside_application(App, File, NextChild1);
-                        _ -> throw(?LocalError(replacable, [])) 
-                    end;
-                _ -> 
-                    ?d(?Expr:type(Ch2)),
-                    case ?Expr:type(Ch2) of
-                        variable -> 
-                            handle_variable_inside_application(App, File, Ch2);
-                        application -> 
-                            case_of_application_arg(App, File, Ch2);
-                        parenthesis -> % Plusz zárójel, de csak 1 arg - annál több nem lehet, hiba
-                            case check_children_number(Ch2) of
-                                1 -> 
-                                    NextChild2 = ?Query:exec1(Ch2, ?Expr:child(1), error),
-                                    handle_variable_inside_application(App, File, NextChild2);
-                                _ -> throw(?LocalError(replacable, [])) 
-                            end;
-                        _ -> throw(?LocalError(replacable, []))    
+            case lists:member(?Expr:type(Ch1), [application, parenthesis, variable]) of
+                true -> case_of_application_child(App, File, Ch1);
+                false -> 
+                    case lists:member(?Expr:type(Ch2), [application, parenthesis, variable]) of
+                        true -> case_of_application_child(App, File, Ch2);
+                        false -> throw(?LocalError(replacable, []))
                     end
             end;
         _ -> throw(?LocalError(replacable, []))
+    end
+.
+
+case_of_application_child(App, File, Child) ->
+    ?d(?Expr:type(Child)),
+    case ?Expr:type(Child) of
+        variable -> 
+            handle_variable_inside_application(App, File, Child);
+        application -> 
+            case_of_application_arg(App, File, Child);
+        parenthesis -> % Plusz zárójel, de csak 1 arg - annál több nem lehet, hiba
+            case check_children_number(Child) of
+                1 -> 
+                    NextChild = ?Query:exec1(Child, ?Expr:child(1), error),
+                    handle_variable_inside_application(App, File, NextChild);
+                _ -> throw(?LocalError(replacable, [])) 
+            end;
+        _ -> throw(?LocalError(replacable, []))    
     end
 .
 
@@ -146,6 +129,7 @@ case_of_application_arg(App, File, Arg) ->
 %% If the untrusted argument is a variable inside an application
 handle_variable_inside_application(App, File, Child) ->
     ?d("----- handle_variable_inside_application -----"),
+    ?d(?Expr:role(Child)),
     case ?Expr:role(Child) of
         expr ->
             {Length, DepsOrFlow} = get_flow_deps(Child),   % if Length = 0 -> Flow | if Lenght = 1 -> Deps
@@ -158,7 +142,7 @@ handle_variable_inside_application(App, File, Child) ->
                         _ -> list_to_atom_sanitize(App, File, DepsOrFlow)
                     end;
                 0 -> % rekurzív külső hívás - t16.erl
-                    find_var_called_by_func(DepsOrFlow, File);
+                    find_var_called_by_func(DepsOrFlow, File, App);
                 _ -> throw(?LocalError(replacable, []))
             end;
         _ -> throw(?LocalError(replacable, []))
@@ -181,6 +165,10 @@ case_of_variable_arg(App, File, Arg) ->
                         expr -> % --------------------- t3.erl ---------------------
                                 ListCompApp = get_list_comp_part(App),
                                 list_to_atom_sanitize(ListCompApp, File, DepsOrFlow);
+                        _ -> throw(?LocalError(replacable, []))
+                    end;
+                tuple ->
+                    case ?Expr:role(DepsOrFlow) of
                         pattern -> % --------------------- t5.erl ---------------------
                             ExprClause = ?Query:exec1(DepsOrFlow, ?Expr:clause(), error),
                             ?d(ExprClause),
@@ -194,18 +182,22 @@ case_of_variable_arg(App, File, Arg) ->
                                         fun_expr ->
                                             ParentOfFunExpr = ?Query:exec1(FunExpr, ?Expr:parent(), error),
                                             ?d(ParentOfFunExpr),
-                                            FunName = ?Expr:value(?Query:exec1(?Query:exec1(ParentOfFunExpr, ?Expr:child(1), error), ?Expr:child(2), error)),
-                                            ?d(FunName),
-                                            Child2 = ?Query:exec1(ParentOfFunExpr, ?Expr:child(2), error),  % UntrustedArg
-                                            ?d(Child2),
-                                            MapAppParent = ?Query:exec1(?Query:exec1(Child2, ?Expr:parent(), error), ?Expr:parent(), error),
+                                            MapAppParent = ?Query:exec1(ParentOfFunExpr, ?Expr:parent(), error),
                                             ?d(MapAppParent),
-                                            list_to_atom_sanitize(MapAppParent, File, Child2);
+                                            FunName = ?Expr:value(?Query:exec1(?Query:exec1(MapAppParent, ?Expr:child(1), error), ?Expr:child(2), error)),
+                                            ?d(FunName),
+                                            case FunName of
+                                                map ->
+                                                    Child2 = ?Query:exec1(ParentOfFunExpr, ?Expr:child(2), error),  % UntrustedArg
+                                                    ?d(Child2),
+                                                    list_to_atom_sanitize(MapAppParent, File, Child2);
+                                                _ -> throw(?LocalError(replacable, []))
+                                            end;
                                         _ -> throw(?LocalError(replacable, []))
                                     end;
                                 _ -> throw(?LocalError(replacable, []))
                             end;
-                        _ -> throw(?LocalError(replacable, []))
+                        _ -> throw(?LocalError(replacable, []))    
                     end;
                 cons -> % --------------------- t4.erl ---------------------
                     ListCompApp = get_list_comp_part(App),
@@ -213,6 +205,7 @@ case_of_variable_arg(App, File, Arg) ->
             end;
         0 -> % --------------------- t13.erl | t14.erl | t16.erl ---------------------
             ?d(?Expr:type(DepsOrFlow)),
+            ?d(?Expr:role(DepsOrFlow)),
             case ?Expr:role(DepsOrFlow) of
                 pattern ->
                     ExprClause = ?Query:exec1(DepsOrFlow, ?Expr:clause(), error),
@@ -252,12 +245,43 @@ case_of_variable_arg(App, File, Arg) ->
                                     end;
                                 _ -> throw(?LocalError(replacable, []))
                             end;
-                        fundef -> find_var_called_by_func(DepsOrFlow, File); % t15.erl
-                        pattern -> % t15.erl
-                            % PatternFlow = ?Query:exec1(DepsOrFlow, reflib_dataflow:flow_back(), error),
-                            % ?d(PatternFlow),
+                        fundef -> find_var_called_by_func(DepsOrFlow, File, App); % t15.erl
+                        pattern -> % t18.erl
+                            PatternFlow = ?Query:exec1(DepsOrFlow, reflib_dataflow:flow_back(), error),
+                            ?d(PatternFlow),
+                            case ?Expr:type(PatternFlow) of
+                                application ->
+                                    ChOfArg = ?Query:exec1(PatternFlow, ?Expr:child(2), error),
+                                    ?d(ChOfArg),
+                                    case check_children_number(ChOfArg) of
+                                        1 ->
+                                            Ch1 = ?Query:exec1(?Query:exec1(PatternFlow, ?Expr:child(2), error), ?Expr:child(1), error),
+                                            case lists:member(?Expr:type(Ch1), [atom, string, integer]) of
+                                                true ->
+                                                    throw(?LocalError(no_multi_atom_gen, []));
+                                                false -> 
+                                                    throw(?LocalError(replacable, []))
+                                            end;
+                                        2 ->
+                                            Ch1 = ?Query:exec1(?Query:exec1(PatternFlow, ?Expr:child(2), error), ?Expr:child(1), error),
+                                            ?d(Ch1),
+                                            Ch2 = ?Query:exec1(?Query:exec1(PatternFlow, ?Expr:child(2), error), ?Expr:child(2), error),
+                                            ?d(Ch2),
+                                            case lists:member(?Expr:type(Ch1), [atom, string, integer]) of
+                                                true -> throw(?LocalError(no_multi_atom_gen, []));
+                                                false -> 
+                                                    case lists:member(?Expr:type(Ch2), [atom, string, integer]) of
+                                                        true -> throw(?LocalError(no_multi_atom_gen, []));
+                                                        false -> throw(?LocalError(replacable, []))
+                                                    end
+                                            end;
+                                        _ -> throw(?LocalError(replacable, []))
+                                    end;
+                                atom -> throw(?LocalError(no_multi_atom_gen, []));
+                                _ -> throw(?LocalError(replacable, []))
+                            end;
                             %list_to_atom_sanitize(App, File, PatternFlow);
-                            list_to_atom_sanitize(App, File, DepsOrFlow);
+                            %list_to_atom_sanitize(App, File, DepsOrFlow);
                         _ -> throw(?LocalError(replacable, []))
                     end;
                 _ -> throw(?LocalError(replacable, []))
@@ -266,29 +290,48 @@ case_of_variable_arg(App, File, Arg) ->
     end
 .
 
-find_var_called_by_func(Flow, File) ->
+find_var_called_by_func(Flow, File, App) ->
     NewFunFlow = ?Query:exec1(Flow, reflib_dataflow:flow_back(), error),
     ?d(NewFunFlow),
     NewFunVar =  ?Query:exec(NewFunFlow, [{call, back}]),
     ?d(NewFunVar),
-    NewFunVarWithOList = hd(NewFunVar),
-    case ?Expr:type(NewFunVarWithOList) of
-        variable ->
-            NewApp = ?Query:exec1(?Query:exec1(NewFunVarWithOList, ?Expr:parent(), error), ?Expr:parent(), error),
-            ?d(NewApp),
-            {NewLength, NewDepsOrFlow} = get_flow_deps(NewFunVarWithOList),
-            ?d(NewDepsOrFlow),
-            case NewLength of
-                1 ->
-                    case ?Expr:role(NewDepsOrFlow) of
-                        expr ->
-                            NewListCompApp = get_list_comp_part(NewApp),
-                            list_to_atom_sanitize(NewListCompApp, File, NewDepsOrFlow);
-                        _ -> list_to_atom_sanitize(NewApp, File, NewDepsOrFlow)
-                    end;
-                0 -> find_var_called_by_func(NewDepsOrFlow, File)
+    
+    case length(NewFunVar) of
+        0 -> % t14.erl - ?????????????????
+            case ?Expr:type(NewFunFlow) of
+                application -> 
+                    ListGen = ?Query:exec1(?Query:exec1(NewFunFlow, ?Expr:parent(), error), ?Expr:parent(), error),
+                    ?d(ListGen),
+                    NewListCompApp = get_list_comp_part(ListGen),
+                    ?d(NewListCompApp),
+                    [_HexprClause, ComprClause] = ?Query:exec(ListGen,?Expr:clauses()),
+                    ?d(ComprClause),
+                    Untrusted = ?Query:exec1(ComprClause, ?Clause:body(), error),
+                    ?d(Untrusted),
+                    list_to_atom_sanitize(NewListCompApp, File, Untrusted);
+                _ -> throw(?LocalError(no_fun_call, []));
             end;
-        _ -> throw(?LocalError(replacable, []))
+        1 ->
+            NewFunVarWithOList = hd(NewFunVar),
+            case ?Expr:type(NewFunVarWithOList) of
+                variable ->
+                    NewApp = ?Query:exec1(?Query:exec1(NewFunVarWithOList, ?Expr:parent(), error), ?Expr:parent(), error),
+                    ?d(NewApp),
+                    {NewLength, NewDepsOrFlow} = get_flow_deps(NewFunVarWithOList),
+                    ?d(NewDepsOrFlow),
+                    case NewLength of
+                        1 ->
+                            case ?Expr:role(NewDepsOrFlow) of
+                                expr ->
+                                    NewListCompApp = get_list_comp_part(NewApp),
+                                    list_to_atom_sanitize(NewListCompApp, File, NewDepsOrFlow);
+                                _ -> list_to_atom_sanitize(NewApp, File, NewDepsOrFlow)
+                            end;
+                        0 -> find_var_called_by_func(NewDepsOrFlow, File, App)
+                    end;
+                _ -> throw(?LocalError(replacable, []))
+            end;
+        _ -> list_to_atom_sanitize(App, File, Flow)
     end
 .
 
@@ -420,5 +463,9 @@ error_text(no_variable, []) ->
     ?MISC:format("No matching variable.");
 error_text(criteria_not_met, []) ->
     ?MISC:format("Variable criteria not met.", []);
+error_text(no_fun_call, []) ->
+    ?MISC:format("Function call not found.", []);
+error_text(no_multi_atom_gen, []) ->
+    ?MISC:format("No multiple atom generation.", []);
 error_text(replacable, []) ->
     ?MISC:format("REPLACE", []).
