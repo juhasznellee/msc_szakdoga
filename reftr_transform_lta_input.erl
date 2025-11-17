@@ -145,7 +145,7 @@ handle_variable_inside_application(App, File, Child) ->
                         pattern -> find_var_called_by_func(DepsOrFlow, File, App);
                         _ -> throw(?LocalError(replacable, []))
                     end;
-                0 -> % rekurzív külső hívás - t16.erl
+                0 -> % rekurzív külső hívás - t16.erl | lta_t16
                     find_var_called_by_func(DepsOrFlow, File, App);
                 _ -> throw(?LocalError(replacable, []))
             end;
@@ -199,7 +199,7 @@ case_of_variable_arg(App, File, Arg) ->
                                             end;
                                         _ -> throw(?LocalError(replacable, []))
                                     end;
-                                fundef -> throw(?LocalError(recursive, [])); %find_var_called_by_func(ExprClause, File, App);
+                                fundef -> find_var_called_by_func(ExprClause, File, App); %throw(?LocalError(recursive, []));
                                 _ -> throw(?LocalError(replacable, []))
                             end;
                         _ -> throw(?LocalError(replacable, []))    
@@ -250,7 +250,7 @@ case_of_variable_arg(App, File, Arg) ->
                                     end;
                                 _ -> throw(?LocalError(replacable, []))
                             end;
-                        fundef -> find_var_called_by_func(ExprClause, File, App); % t15.erl
+                        fundef -> find_var_called_by_func(DepsOrFlow, File, App); %throw(?LocalError(recursive, []));  % t15.erl | lta_t15.erl
                         pattern ->
                             PatternFlow = ?Query:exec1(DepsOrFlow, reflib_dataflow:flow_back(), error),
                             ?d(PatternFlow),
@@ -294,13 +294,14 @@ case_of_variable_arg(App, File, Arg) ->
 .
 
 find_var_called_by_func(Flow, File, App) ->
+    ?d(?Expr:type(Flow)),
     NewFunFlow = ?Query:exec1(Flow, reflib_dataflow:flow_back(), error),
     ?d(NewFunFlow),
     NewFunVar =  ?Query:exec(NewFunFlow, [{call, back}]),
     ?d(NewFunVar),
     
     case length(NewFunVar) of
-        0 -> % t14.erl - ?????????????????
+        0 -> % t14.erl
             case ?Expr:type(NewFunFlow) of
                 application -> 
                     ListGen = ?Query:exec1(?Query:exec1(NewFunFlow, ?Expr:parent(), error), ?Expr:parent(), error),
@@ -314,7 +315,7 @@ find_var_called_by_func(Flow, File, App) ->
                     list_to_atom_sanitize(NewListCompApp, File, Untrusted);
                 _ -> throw(?LocalError(no_fun_call, []))
             end;
-        1 ->
+        1 -> % t16.erl | t17.erl
             NewFunVarWithOList = hd(NewFunVar),
             case ?Expr:type(NewFunVarWithOList) of
                 variable ->
@@ -327,22 +328,22 @@ find_var_called_by_func(Flow, File, App) ->
                             case ?Expr:role(NewDepsOrFlow) of
                                 expr ->
                                     NewListCompApp = get_list_comp_part(NewApp),
-                                    list_to_atom_sanitize(NewListCompApp, File, NewDepsOrFlow);
+                                    list_to_atom_sanitize(NewListCompApp, File, NewDepsOrFlow); %t16.erl
                                 _ -> list_to_atom_sanitize(NewApp, File, NewDepsOrFlow)
                             end;
-                        0 -> find_var_called_by_func(NewDepsOrFlow, File, App)
+                        0 -> find_var_called_by_func(NewDepsOrFlow, File, App) %lta_t16.erl | t14.erl
                     end;
                 _ -> throw(?LocalError(replacable, []))
             end;
-        _ -> 
+        _ ->
             NewFunVarApp = lists:filter(fun(E) -> ?Expr:type(E) == application end, NewFunVar),
             ?d(NewFunVarApp),
             case length(NewFunVarApp) of
                 1 -> 
                     FunCall = ?Query:exec1(?Query:exec1(hd(NewFunVarApp), ?Expr:parent(), error), ?Expr:parent(), error),
                     ?d(FunCall),
-                    list_to_atom_sanitize(FunCall, File, hd(NewFunVarApp));
-                _ -> throw(?LocalError(replacable, []))
+                    list_to_atom_sanitize(FunCall, File, hd(NewFunVarApp)); % t17.erl
+                _ -> throw(?LocalError(multi_fun_call, [])) % t15.erl
             end
     end
 .
@@ -469,11 +470,13 @@ error_text(no_transformation, [Name]) ->
     ?MISC:format("There is no given transformation for ~p function", [Name]);
 error_text(no_fun_call, []) ->
     ?MISC:format("Function call not found.", []);
+error_text(multi_fun_call, []) ->
+    ?MISC:format("Multiple function called, there is no transformation.", []);
 error_text(no_multi_atom_gen, []) ->
     ?MISC:format("No multiple atom generation.", []);
 error_text(already_safe, [Name]) ->
     ?MISC:format("The ~p function is already safe.", [Name]);
 error_text(recursive, []) ->
-    ?MISC:format("This is a recursive function, there is no transformation yet.", []);
+    ?MISC:format("This is a recursive function, there is no transformation.", []);
 error_text(replacable, []) ->
     ?MISC:format("REPLACE", []).
