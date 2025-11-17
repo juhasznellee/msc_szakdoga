@@ -13,8 +13,12 @@ prepare(Args) ->      %Args: module, range
     case Name of
         cmd ->
             Arg = ?Query:exec1(?Query:exec1(App, ?Expr:child(2), error), ?Expr:child(1), error),
-            cmd_input_sanitize(App, File, Arg);
-        _ -> ?LocalError(no_transformation, [Name])
+            case ?Expr:type(Arg) of
+                string -> 
+                    throw(?LocalError(already_safe, []));
+                _ -> cmd_input_sanitize(App, File, Arg)
+            end;
+        _ -> throw(?LocalError(no_transformation, [Name]))
     end
 .
 
@@ -22,7 +26,6 @@ prepare(Args) ->      %Args: module, range
 %%% Untrusted argument sanitize
 
 cmd_input_sanitize(App, File, UntrustedArg) -> 
-    ?d("--- SANITIZE CMD ---"),
     [{_, AppParent}] = ?Syn:parent(App),
     CheckFunExists = exists_check_function(File),
     [fun() ->
@@ -108,16 +111,7 @@ form_index(File, Form) ->
 
 %%% ============================================================================
 %%% Error messages
-
 error_text(no_transformation, [Name]) ->
     ?MISC:format("There is no given transformation for ~p function", [Name]);
-error_text(link_fun_not_found, []) ->
-    ?MISC:format("No link function found related to spawn.", []);
-error_text(already_safe, [Name]) ->
-    ?MISC:format("The ~p function is already safe.", [Name]);
-error_text(no_variable, []) ->
-    ?MISC:format("No matching variable.");
-error_text(criteria_not_met, []) ->
-    ?MISC:format("Variable criteria not met.", []);
-error_text(replacable, []) ->
-    ?MISC:format("REPLACE", []).
+error_text(already_safe, []) ->
+    ?MISC:format("No need for transformation, the function is safe.", []).

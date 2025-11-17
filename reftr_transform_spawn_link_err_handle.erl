@@ -13,7 +13,7 @@ prepare(Args) ->      %Args: module, range
     FunName = ?Fun:name(Function),
     case FunName of
         spawn -> transform_spawn_to_spawn_link(App);
-        _ -> ?LocalError(no_transformation, [FunName])
+        _ -> throw(?LocalError(no_transformation, [FunName]))
     end
 .
 
@@ -56,6 +56,4 @@ transform_spawn_to_spawn_link(App) ->
 error_text(no_transformation, [Name]) ->
     ?MISC:format("There is no given transformation for ~p function", [Name]);
 error_text(link_fun_not_found, []) ->
-    ?MISC:format("No link function found related to spawn.", []);
-error_text(replacable, []) ->
-    ?MISC:format("REPLACE", []).
+    ?MISC:format("No link function found related to spawn.", []).

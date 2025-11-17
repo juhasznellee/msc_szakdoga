@@ -39,8 +39,12 @@
 	ri:transform_lta_input(t13,{136,147}).
 	ri:transform_lta_input(t13,{187,198}).
 	ri:transform_lta_input(t14,{187,198}).
+	ri:transform_lta_input(t15,{62,73}).
+	ri:transform_lta_input(t16,{52,63}).
+	ri:transform_lta_input(t17,{59,60}).
 	---
-	ri:transform_oscmd_input(oscmd_t1,{59,61}).
+	ri:transform_oscmd_input(oscmd_t1,{60,62}).
+	ri:transform_oscmd_input(oscmd_t2,{57,59}).
 	---
 	ri:transform_fun_replacement(fun_rep_t1,{54,65}).
 	ri:transform_fun_replacement(fun_rep_t2,{50,63}).

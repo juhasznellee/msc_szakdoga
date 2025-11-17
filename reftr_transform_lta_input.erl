@@ -31,6 +31,7 @@ prepare(Args) ->      %Args: module, range
                     throw(?LocalError(no_multi_atom_gen, []));
                 _ -> throw(?LocalError(replacable, []))
             end;
+        list_to_existing_atom -> ?LocalError(already_safe, [Name]);
         _ -> ?LocalError(no_transformation, [Name])
     end   
 .
@@ -50,10 +51,10 @@ case_of_infix_expr_arg(App, File, Arg) ->
     ?d(Ch2),
     ?d(?Expr:type(Ch1)),
     ?d(?Expr:type(Ch2)),
-    case lists:member(?Expr:type(Ch1), [application, cons, variable]) of
+    case lists:member(?Expr:type(Ch1), [application, cons, variable, infix_expr]) of
         true -> case_of_infix_expr_child(App, File, Ch1);
         false -> 
-            case lists:member(?Expr:type(Ch2), [application, cons, variable]) of
+            case lists:member(?Expr:type(Ch2), [application, cons, variable, infix_expr]) of
                 true -> case_of_infix_expr_child(App, File, Ch2);
                 false -> throw(?LocalError(replacable, []))
             end
@@ -75,6 +76,8 @@ case_of_infix_expr_child(App, File, Child) ->
             list_to_atom_sanitize(ListCompApp, File, Child);        
         variable -> % t4.erl
             case_of_variable_arg(App, File, Child);
+        infix_expr ->
+            case_of_infix_expr_arg(App, File, Child);
         _ -> ok
     end
 .
@@ -139,7 +142,8 @@ handle_variable_inside_application(App, File, Child) ->
                         expr -> 
                             ListCompApp = get_list_comp_part(App),
                             list_to_atom_sanitize(ListCompApp, File, DepsOrFlow);
-                        _ -> list_to_atom_sanitize(App, File, DepsOrFlow)
+                        pattern -> find_var_called_by_func(DepsOrFlow, File, App);
+                        _ -> throw(?LocalError(replacable, []))
                     end;
                 0 -> % rekurzív külső hívás - t16.erl
                     find_var_called_by_func(DepsOrFlow, File, App);
@@ -195,6 +199,7 @@ case_of_variable_arg(App, File, Arg) ->
                                             end;
                                         _ -> throw(?LocalError(replacable, []))
                                     end;
+                                fundef -> throw(?LocalError(recursive, [])); %find_var_called_by_func(ExprClause, File, App);
                                 _ -> throw(?LocalError(replacable, []))
                             end;
                         _ -> throw(?LocalError(replacable, []))    
@@ -245,8 +250,8 @@ case_of_variable_arg(App, File, Arg) ->
                                     end;
                                 _ -> throw(?LocalError(replacable, []))
                             end;
-                        fundef -> find_var_called_by_func(DepsOrFlow, File, App); % t15.erl
-                        pattern -> % t18.erl
+                        fundef -> find_var_called_by_func(ExprClause, File, App); % t15.erl
+                        pattern ->
                             PatternFlow = ?Query:exec1(DepsOrFlow, reflib_dataflow:flow_back(), error),
                             ?d(PatternFlow),
                             case ?Expr:type(PatternFlow) of
@@ -280,8 +285,6 @@ case_of_variable_arg(App, File, Arg) ->
                                 atom -> throw(?LocalError(no_multi_atom_gen, []));
                                 _ -> throw(?LocalError(replacable, []))
                             end;
-                            %list_to_atom_sanitize(App, File, PatternFlow);
-                            %list_to_atom_sanitize(App, File, DepsOrFlow);
                         _ -> throw(?LocalError(replacable, []))
                     end;
                 _ -> throw(?LocalError(replacable, []))
@@ -309,7 +312,7 @@ find_var_called_by_func(Flow, File, App) ->
                     Untrusted = ?Query:exec1(ComprClause, ?Clause:body(), error),
                     ?d(Untrusted),
                     list_to_atom_sanitize(NewListCompApp, File, Untrusted);
-                _ -> throw(?LocalError(no_fun_call, []));
+                _ -> throw(?LocalError(no_fun_call, []))
             end;
         1 ->
             NewFunVarWithOList = hd(NewFunVar),
@@ -331,7 +334,16 @@ find_var_called_by_func(Flow, File, App) ->
                     end;
                 _ -> throw(?LocalError(replacable, []))
             end;
-        _ -> list_to_atom_sanitize(App, File, Flow)
+        _ -> 
+            NewFunVarApp = lists:filter(fun(E) -> ?Expr:type(E) == application end, NewFunVar),
+            ?d(NewFunVarApp),
+            case length(NewFunVarApp) of
+                1 -> 
+                    FunCall = ?Query:exec1(?Query:exec1(hd(NewFunVarApp), ?Expr:parent(), error), ?Expr:parent(), error),
+                    ?d(FunCall),
+                    list_to_atom_sanitize(FunCall, File, hd(NewFunVarApp));
+                _ -> throw(?LocalError(replacable, []))
+            end
     end
 .
 
@@ -398,7 +410,7 @@ list_to_atom_sanitize(App, File, UntrustedArg) ->
         SanitizeFuncLeft = ?Syn:create(#expr{type = application}, 
                                 [{esub, [?Syn:construct({atom, length})]}, 
                                 {esub, SanitizeFuncLeftArgList}]),
-        SanitizeFuncRight = ?Syn:construct({integer, 50}),
+        SanitizeFuncRight = ?Syn:construct({integer, 10000}),
         SanitizeFuncClause = ?Syn:construct({fun_clause, 
                                 [{atom, size_check}], 
                                 [{var_pattern, "X"}], 
@@ -455,17 +467,13 @@ check_children_number(Node) ->
 
 error_text(no_transformation, [Name]) ->
     ?MISC:format("There is no given transformation for ~p function", [Name]);
-error_text(link_fun_not_found, []) ->
-    ?MISC:format("No link function found related to spawn.", []);
-error_text(already_safe, [Name]) ->
-    ?MISC:format("The ~p function is already safe.", [Name]);
-error_text(no_variable, []) ->
-    ?MISC:format("No matching variable.");
-error_text(criteria_not_met, []) ->
-    ?MISC:format("Variable criteria not met.", []);
 error_text(no_fun_call, []) ->
     ?MISC:format("Function call not found.", []);
 error_text(no_multi_atom_gen, []) ->
     ?MISC:format("No multiple atom generation.", []);
+error_text(already_safe, [Name]) ->
+    ?MISC:format("The ~p function is already safe.", [Name]);
+error_text(recursive, []) ->
+    ?MISC:format("This is a recursive function, there is no transformation yet.", []);
 error_text(replacable, []) ->
     ?MISC:format("REPLACE", []).

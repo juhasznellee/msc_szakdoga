@@ -16,9 +16,9 @@ prepare(Args) ->      %Args: module, range
         binary_to_atom -> transform_binary_to_existing_atom(App);
         binary_to_term -> transform_binary_to_term_safe(App);
         list_to_atom -> transform_list_to_existing_atom(App);
-        list_to_existing_atom -> throw(?LocalError(already_safe, [list_to_existing_atom]));
-        binary_to_existing_atom -> throw(?LocalError(already_safe, [binary_to_existing_atom]));
-        _ -> ?LocalError(no_transformation, [FunName])
+        list_to_existing_atom -> throw(?LocalError(already_safe, [FunName]));
+        binary_to_existing_atom -> throw(?LocalError(already_safe, [FunName]));
+        _ -> throw(?LocalError(no_transformation, [FunName]))
     end
 .
 
@@ -82,6 +82,4 @@ transform_binary_to_term_safe(App) ->
 error_text(no_transformation, [Name]) ->
     ?MISC:format("There is no given transformation for ~p function", [Name]);
 error_text(already_safe, [Name]) ->
-    ?MISC:format("The ~p function is already safe.", [Name]);
-error_text(replacable, []) ->
-    ?MISC:format("REPLACE", []).
+    ?MISC:format("The ~p function is already safe.", [Name]).
