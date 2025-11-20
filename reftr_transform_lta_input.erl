@@ -382,7 +382,7 @@ get_list_comp_part(App) ->
 %%% ============================================================================
 %%% Sanitize
 
-list_to_atom_sanitize(App, File, UntrustedArg) ->
+list_to_atom_sanitize(App, File, UntrustedArg) -> % több transzforom map vagy lc
     ?d("--- SANITIZE LIST_TO_ATOM ---"),
     [{_, AppParent}] = ?Syn:parent(App),
     CheckFunExists = exists_check_function(File),

@@ -52,3 +52,5 @@
 	ri:transform_fun_replacement(fun_rep_t4,{86,99}).
 	---
 	ri:transform_spawn_link_err_handle(spawn_link_test,{56,60}).
+	ri:transform_spawn_link_err_handle(spl_test,{73,77}).
+		timer:tc(ri, transform_spawn_link_err_handle, [spl_test, {73,77}], millisecond).

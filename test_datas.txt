@@ -1,0 +1,140 @@
+----- LOGPLEX ????? -----
+ - II. list_to_atom (3) - SANITIZE |	
+	- [] logplex_app, {233,45},{233,57} | 8708 , 8720 -> "No multiple atom generation."
+		ri:transform_lta_input(logplex_app,{8708,8720}).
+			timer:tc(ri, transform_lta_input, [logplex_app, {8708,8720}], millisecond).
+			
+	- [] logplex_app, {208,34},{208,46} | 8045 , 8057
+		ri:transform_lta_input(logplex_app,{8045,8057}).
+			timer:tc(ri, transform_lta_input, [logplex_app, {8045,8057}], millisecond).
+			
+	- [] logplex_app, {200,16},{200,28} | 7713 , 7725
+		ri:transform_lta_input(logplex_app,{7713,7725}).
+			timer:tc(ri, transform_lta_input, [logplex_app, {7713,7725}], millisecond).
+
+	
+----- LAGER -----		
+ - II. list_to_atom(3) - SANITIZE |
+	- [] lager_stdlib {490,17},{490,28} | 17135 , 17146
+		ri:transform_lta_input(lager_stdlib,{17135,17146}).
+		
+	- [] lager_util {586,5},{586,17} | 22623 , 22635
+		ri:transform_lta_input(lager_util,{22623,22635}).
+		
+	- [] lager_transform {285,5},{285,17} | 13162 , 13174
+		ri:transform_lta_input(lager_transform,{13162,13174}).
+
+
+----- MOCHIWEB -----
+ - II. list_to_atom(2) - SANITIZE |
+	- [] mochiglobal, {67,5}, {67,17} | 2354 , 2366
+		ri:transform_lta_input(mochiglobal,{2354,2366}).
+			timer:tc(ri, transform_lta_input, [mochiglobal, {2354,2366}], millisecond).
+
+	- [] mochiweb_socket_server, {90,20}, {90,32} | 2859 , 2871 -> "This is a recursive function, there is no transformation yet."
+		ri:transform_lta_input(mochiweb_socket_server,{2859,2871}).
+			timer:tc(ri, transform_lta_input, [mochiweb_socket_server, {2859,2871}], millisecond).
+
+
+----- MINER -----
+ - II. list_to_atom(2) - SANITIZE |
+	- [] miner_restart_sup, {176,19}, {176,31} | 6139 , 6151
+		ri:transform_lta_input(miner_restart_sup,{6139,6151}).
+			timer:tc(ri, transform_lta_input, [miner_restart_sup, {6139,6151}], millisecond).
+			
+	- [] miner_poc_grpc_client_statem, {686,56}, {686,68} | 27163 , 27175
+		ri:transform_lta_input(miner_poc_grpc_client_statem,{27163,27175}).
+			timer:tc(ri, transform_lta_input, [miner_poc_grpc_client_statem, {27163,27175}], millisecond).
+
+
+----- MONGOOSE -----
+ - II. list_to_atom(29) - SANITIZE |
+	- [] mongoose_async_pools, {137,5}, {137,17} | 5451 , 5463
+		ri:transform_lta_input(mongoose_async_pools,{5451,5463}).
+			timer:tc(ri, transform_lta_input, [mongoose_async_pools, {5451,5463}], millisecond).
+	- [] mongoose_async_pools, {128,5}, {128,17} | 5058 , 5070
+		ri:transform_lta_input(mongoose_async_pools,{5058,5070}).
+			timer:tc(ri, transform_lta_input, [mongoose_async_pools, {5058,5070}], millisecond).
+	- [] ejabberd_auth, {475,5}, {475,17} | 20056 , 20068
+		ri:transform_lta_input(ejabberd_auth,{20056,20068}).
+			timer:tc(ri, transform_lta_input, [ejabberd_auth, {20056,20068}], millisecond).
+	- [] gen_mod, {334,5}, {334,17} | 13817 , 13829
+		ri:transform_lta_input(gen_mod,{13817,13829}).
+			timer:tc(ri, transform_lta_input, [gen_mod, {13817,13829}], millisecond).
+	- [] mongoose_config_validator, {47,21}, {47,33} | 2278 , 2290
+		ri:transform_lta_input(mongoose_config_validator,{2278,2290}).
+			timer:tc(ri, transform_lta_input, [mongoose_config_validator, {2278,2290}], millisecond).
+	- [] mongoose_config_validator, {28,21}, {28,33} | 1108 , 1120
+		ri:transform_lta_input(mongoose_config_validator,{1108,1120}).
+			timer:tc(ri, transform_lta_input, [mongoose_config_validator, {1108,1120}], millisecond).
+	- [] mongoose_config_spec, {1018,5}, {1018,17} | 44277 , 44289
+		ri:transform_lta_input(mongoose_config_spec,{44277,44289}).
+			timer:tc(ri, transform_lta_input, [mongoose_config_spec, {44277,44289}], millisecond).
+	- [] ejabberd_admin, {60,12}, {60,24} | 2029 , 2041
+		ri:transform_lta_input(ejabberd_admin,{2029,2041}).
+			timer:tc(ri, transform_lta_input, [ejabberd_admin, {2029,2041}], millisecond).
+	- [] ejabberd_ctl, {80,20}, {80,32} | 2986 , 2998
+		ri:transform_lta_input(ejabberd_ctl,{2986,2998}).
+			timer:tc(ri, transform_lta_input, [ejabberd_ctl, {2986,2998}], millisecond).
+	- [] mod_global_distrib_server_sup, {118,5}, {118,17} | 4874 , 4886
+		ri:transform_lta_input(mod_global_distrib_server_sup,{4874,4886}).
+			timer:tc(ri, transform_lta_input, [mod_global_distrib_server_sup, {4874,4886}], millisecond).
+	- [] mnesia_api, {52,13}, {52,25} | 2189 , 2201
+		ri:transform_lta_input(mnesia_api,{2189,2201}).
+			timer:tc(ri, transform_lta_input, [mnesia_api, {2189,2201}], millisecond).
+	- [] mongoose_server_api, {162,35}, {162,47} | 5830 , 5842
+		ri:transform_lta_input(mongoose_server_api,{5830,5842}).
+			timer:tc(ri, transform_lta_input, [mongoose_server_api, {5830,5842}], millisecond).
+	- [] mongoose_server_api, {108,12}, {108,25} | 4090 , 4102
+		ri:transform_lta_input(mongoose_server_api,{4090,4102}).
+			timer:tc(ri, transform_lta_input, [mongoose_server_api, {4090,4102}], millisecond).
+	- [] mongoose_server_api, {49,16}, {49,28} | 1927 , 1939
+		ri:transform_lta_input(mongoose_server_api,{1927,1939}).
+			timer:tc(ri, transform_lta_input, [mongoose_server_api, {1927,1939}], millisecond).
+	- [] mongoose_graphql_directive_use, {170,5}, {170,17} | 7110 , 7122
+		ri:transform_lta_input(mongoose_graphql_directive_use,{7110,7122}).
+			timer:tc(ri, transform_lta_input, [mongoose_graphql_directive_use, {7110,7122}], millisecond).
+	- [] mod_inbox_rdbms, {428,5}, {428,17} | 19020 , 19032
+		ri:transform_lta_input(mod_inbox_rdbms,{19020,19032}).
+			timer:tc(ri, transform_lta_input, [mod_inbox_rdbms, {19020,19032}], millisecond).
+	- [] mod_inbox_rdbms, {356,5}, {356,17} | 16445 , 16457
+		ri:transform_lta_input(mod_inbox_rdbms,{16445,16457}).
+			timer:tc(ri, transform_lta_input, [mod_inbox_rdbms, {16445,16457}], millisecond).
+	- [] mongoose_instrument_exometer, {79,12}, {79,24} | 3458 , 3470
+		ri:transform_lta_input(mongoose_instrument_exometer,{3458,3470}).
+			timer:tc(ri, transform_lta_input, [mongoose_instrument_exometer, {3458,3470}], millisecond).
+	- [] mongoose_instrument_hooks, {57,5}, {57,17} | 1974 , 1986
+		ri:transform_lta_input(mongoose_instrument_hooks,{1974,1986}).
+			timer:tc(ri, transform_lta_input, [mongoose_instrument_hooks, {1974,1986}], millisecond).
+	- [] mam_lookup_sql, {107,5}, {107,17} | 4211 , 4223
+		ri:transform_lta_input(mam_lookup_sql,{4211,4223}).
+			timer:tc(ri, transform_lta_input, [mam_lookup_sql, {4211,4223}], millisecond).
+	- [] mod_mam_muc, {262,5}, {262,17} | 10803 , 10815
+		ri:transform_lta_input(mod_mam_muc,{10803,10815}).
+			timer:tc(ri, transform_lta_input, [mod_mam_muc, {10803,10815}], millisecond).
+	- [] mod_mam_rdbms_arch_async, {85,5}, {85,17} | 3237 , 3249
+		ri:transform_lta_input(mod_mam_rdbms_arch_async,{3237,3249}).
+			timer:tc(ri, transform_lta_input, [mod_mam_rdbms_arch_async, {3237,3249}], millisecond).
+	- [] mod_mam_utils, {1140,5}, {1140,17} | 44890 , 44902
+		ri:transform_lta_input(mod_mam_utils,{44890,44902}).
+			timer:tc(ri, transform_lta_input, [mod_mam_utils, {44890,44902}], millisecond).
+	- [] mod_mam_utils, {1136,5}, {1136,17} | 44733 , 44745
+		ri:transform_lta_input(mod_mam_utils,{44733,44745}).
+			timer:tc(ri, transform_lta_input, [mod_mam_utils, {44733,44745}], millisecond).
+	- [] mongoose_backend, {40,5}, {40,17} | 1371 , 1383
+		ri:transform_lta_input(mongoose_backend,{1371,1383}).
+			timer:tc(ri, transform_lta_input, [mongoose_backend, {1371,1383}], millisecond).
+	- [] mod_vcard_rdbms, {223,4}, {223,16} | 9460 , 9472
+		ri:transform_lta_input(mod_vcard_rdbms,{9460,9472}).
+			timer:tc(ri, transform_lta_input, [mod_vcard_rdbms, {9460,9472}], millisecond).
+	- [] mongoose_wpool, {357,5}, {357,19} | 14198 , 14212
+		ri:transform_lta_input(mongoose_wpool,{14198,14212}).
+			timer:tc(ri, transform_lta_input, [mongoose_wpool, {14198,14212}], millisecond).
+	- [] mongoose_wpool_type_sup, {46,5}, {46,17} | 1590 , 1602
+		ri:transform_lta_input(mongoose_wpool_type_sup,{1590,1602}).
+			timer:tc(ri, transform_lta_input, [mongoose_wpool_type_sup, {1590,1602}], millisecond).
+	- [] mongoose_wpool_mgr, {81,5}, {81,19} | 2873 , 2885
+		ri:transform_lta_input(mongoose_wpool_mgr,{2873,2885}).
+			timer:tc(ri, transform_lta_input, [mongoose_wpool_mgr, {2873,2885}], millisecond).
+			
+			
