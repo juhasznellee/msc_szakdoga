@@ -336,17 +336,44 @@ find_var_called_by_func(Flow, File, App) ->
                 _ -> throw(?LocalError(replacable, []))
             end;
         _ ->
-            NewFunVarApp = lists:filter(fun(E) -> ?Expr:type(E) == application end, NewFunVar),
-            ?d(NewFunVarApp),
-            case length(NewFunVarApp) of
-                1 -> 
-                    FunCall = ?Query:exec1(?Query:exec1(hd(NewFunVarApp), ?Expr:parent(), error), ?Expr:parent(), error),
-                    ?d(FunCall),
-                    list_to_atom_sanitize(FunCall, File, hd(NewFunVarApp)); % t17.erl
-                _ -> throw(?LocalError(multi_fun_call, [])) % t15.erl
-            end
+            NewList = lists:map(fun(E) -> get_nodes_to_modify(E) end, NewFunVar),
+            ?d(NewList),
+            multiple_list_to_atom_sanitize(NewList, File)
+            % NewFunVarApp = lists:filter(fun(E) -> ?Expr:type(E) == application end, NewFunVar),
+            % ?d(NewFunVarApp),
+            % case length(NewFunVarApp) of
+            %     1 -> 
+            %         FunCall = ?Query:exec1(?Query:exec1(hd(NewFunVarApp), ?Expr:parent(), error), ?Expr:parent(), error),
+            %         ?d(FunCall),
+            %         list_to_atom_sanitize(FunCall, File, hd(NewFunVarApp)); % t17.erl
+            %     _ -> throw(?LocalError(multi_fun_call, [])) % t15.erl
+            % end
     end
 .
+
+get_nodes_to_modify(Node) ->
+    case ?Expr:type(Node) of
+        variable ->
+            NewApp = ?Query:exec1(?Query:exec1(Node, ?Expr:parent(), error), ?Expr:parent(), error),
+            ?d(NewApp),
+            {Length, DepsOrFlow} = get_flow_deps(Node),
+            case Length of
+                1 ->
+                    case ?Expr:role(DepsOrFlow) of
+                        expr ->
+                            ListCompApp = get_list_comp_part(NewApp),
+                            {ListCompApp, DepsOrFlow};
+                        _ -> {NewApp, DepsOrFlow}
+                    end;
+                0 -> {NewApp, DepsOrFlow}
+            end;
+        application ->
+            FunCall = ?Query:exec1(?Query:exec1(Node, ?Expr:parent(), error), ?Expr:parent(), error),
+            {FunCall, Node};
+        _ -> throw(?LocalError(replacable, []))
+    end
+.
+
 
 get_flow_deps(Arg) ->
     Flow = ?Query:exec1(Arg, reflib_dataflow:flow_back(), error),
@@ -382,45 +409,55 @@ get_list_comp_part(App) ->
 %%% ============================================================================
 %%% Sanitize
 
+multiple_list_to_atom_sanitize(ListOfMod, File) ->
+    CheckFunExists = exists_check_function(File),
+    FormIndexList = lists:map(fun({App, _}) -> get_form_index(File, App) end, ListOfMod),
+    ?d(FormIndexList),
+    UniqFormList = lists:uniq(FormIndexList),
+    ?d(UniqFormList),
+    AppParentList = lists:map(fun({App, _}) -> get_app_parent(App) end, ListOfMod),
+    ?dAppParentList(),
+    [fun() ->
+        NewConstructionList = lists:map(fun({App, Arg}) -> create_new_case(App, Arg) end, ListOfMod), % {CaseSanitizeArgList, NewCase}
+        ?d(NewConstructionList),
+        SanitizeFuncForm = create_new_form(),
+
+        lists:map(
+            fun({{AppParent, App}, {_, NewCase}}) ->
+                    do_something(AppParent, App, NewCase)
+            end,
+            lists:zip(AppParentList, NewConstructionList)
+        ),
+
+        %lists:map(fun({AppParent, App, _, NewCase}) -> ?Syn:replace(AppParent, {node, App}, [NewCase]) end, NewConstructionList),
+        ?d("SIKER"),
+        % ?Syn:replace(AppParent, {node, App}, [NewCase]),
+        case CheckFunExists of
+            true -> ok;
+            false ->
+                %?File:add_form(File, FormIndex + 1, SanitizeFuncForm)
+                lists:map(fun(E) -> ?File:add_form(File, E + 1, SanitizeFuncForm) end, UniqFormList)
+        end,
+
+        lists:map(fun({_, _, CaseSanitizeArgList, _}) -> ?Transform:touch(CaseSanitizeArgList) end, NewConstructionList)
+    end]
+.
+
+
+
 list_to_atom_sanitize(App, File, UntrustedArg) -> % több transzforom map vagy lc
     ?d("--- SANITIZE LIST_TO_ATOM ---"),
-    [{_, AppParent}] = ?Syn:parent(App),
     CheckFunExists = exists_check_function(File),
+    [{_, AppParent}] = ?Syn:parent(App),
     [fun() ->
-        %--- CRIT CHECK
-        {_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
-        CaseSanitizeArgList = ?Syn:create(#expr{type=arglist}, [{esub, CaseSanitizeArg}]),
-        CaseSanitizeApp = ?Syn:create(#expr{type = application}, 
-                                [{esub, [?Syn:construct({atom, size_check})]}, 
-                                {esub, CaseSanitizeArgList}]),
+        {CaseSanitizeArgList, NewCase} = create_new_case(App, UntrustedArg),
+        ?d(CaseSanitizeArgList),
+        ?d(NewCase),
+        SanitizeFuncForm = create_new_form(),
+        ?d(SanitizeFuncForm),
 
-        %--- CASE - TRUE
-        {_ , FunctionPart} = lists:keyfind(App, 1, ?Syn:copy(App)),
-        TrueSanitizePattern = ?Syn:construct({pattern, [{atom, true}], [], [FunctionPart]}),
-
-        %--- CASE - FALSE
-        ThrowArgList = ?Syn:create(#expr{type=arglist}, [{esub, ?Syn:construct({string, "Variable criteria not met"})}]),
-        ThrowApp = ?Syn:create(#expr{type = application}, [{esub, [?Syn:construct({atom, throw})]},{esub, ThrowArgList}]),
-        FalseSanitizePattern = ?Syn:construct({pattern, [{atom, false}], [], [ThrowApp]}),
-
-        %--- CASE
-        NewCase = ?Syn:construct({'case', CaseSanitizeApp, [TrueSanitizePattern, FalseSanitizePattern]}),
-
-        %--- SANITIZE FUNCTION
-        SanitizeFuncLeftArgList = ?Syn:create(#expr{type=arglist}, [{esub, ?Syn:construct({var, "X"})}]),
-        SanitizeFuncLeft = ?Syn:create(#expr{type = application}, 
-                                [{esub, [?Syn:construct({atom, length})]}, 
-                                {esub, SanitizeFuncLeftArgList}]),
-        SanitizeFuncRight = ?Syn:construct({integer, 10000}),
-        SanitizeFuncClause = ?Syn:construct({fun_clause, 
-                                [{atom, size_check}], 
-                                [{var_pattern, "X"}], 
-                                [], 
-                                [{{infix_expr, '<'}, SanitizeFuncLeft, SanitizeFuncRight}]}),
-        SanitizeFuncForm = ?Syn:construct({func, [SanitizeFuncClause]}),
-
-        LastForm = ?Query:exec1(App, ?Query:seq([?Expr:clause(), ?Clause:funcl(), ?Clause:form()]), error),
-        FormIndex = form_index(File, LastForm),
+        FormIndex = get_form_index(File, App),
+        ?d(FormIndex),
 
         ?Syn:replace(AppParent, {node, App}, [NewCase]),
         case CheckFunExists of
@@ -431,6 +468,70 @@ list_to_atom_sanitize(App, File, UntrustedArg) -> % több transzforom map vagy l
 
         ?Transform:touch(CaseSanitizeArgList)
     end]
+.
+
+create_new_case(App, UntrustedArg) ->
+    %--- CRIT CHECK
+    {_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
+    CaseSanitizeArgList = ?Syn:create(#expr{type=arglist}, [{esub, CaseSanitizeArg}]),
+    CaseSanitizeApp = ?Syn:create(#expr{type = application}, 
+                            [{esub, [?Syn:construct({atom, size_check})]}, 
+                            {esub, CaseSanitizeArgList}]),
+
+    %--- CASE - TRUE
+    {_ , FunctionPart} = lists:keyfind(App, 1, ?Syn:copy(App)),
+    TrueSanitizePattern = ?Syn:construct({pattern, [{atom, true}], [], [FunctionPart]}),
+
+    %--- CASE - FALSE
+    ThrowArgList = ?Syn:create(#expr{type=arglist}, [{esub, ?Syn:construct({string, "Variable criteria not met"})}]),
+    ThrowApp = ?Syn:create(#expr{type = application}, [{esub, [?Syn:construct({atom, throw})]},{esub, ThrowArgList}]),
+    FalseSanitizePattern = ?Syn:construct({pattern, [{atom, false}], [], [ThrowApp]}),
+
+    %--- CASE
+    NewCase = ?Syn:construct({'case', CaseSanitizeApp, [TrueSanitizePattern, FalseSanitizePattern]}),
+    {CaseSanitizeArgList, NewCase}
+.
+
+create_new_form() ->
+    %--- SANITIZE FUNCTION
+    SanitizeFuncLeftArgList = ?Syn:create(#expr{type=arglist}, [{esub, ?Syn:construct({var, "X"})}]),
+    SanitizeFuncLeft = ?Syn:create(#expr{type = application}, 
+                            [{esub, [?Syn:construct({atom, length})]}, 
+                            {esub, SanitizeFuncLeftArgList}]),
+    SanitizeFuncRight = ?Syn:construct({integer, 10000}),
+    SanitizeFuncClause = ?Syn:construct({fun_clause, 
+                            [{atom, size_check}], 
+                            [{var_pattern, "X"}], 
+                            [], 
+                            [{{infix_expr, '<'}, SanitizeFuncLeft, SanitizeFuncRight}]}),
+    SanitizeFuncForm = ?Syn:construct({func, [SanitizeFuncClause]}),
+    SanitizeFuncForm
+.
+
+do_replace_node(AppParent, App, NewCase) ->
+    ?Syn:replace(AppParent, {node, App}, [NewCase]).
+.
+
+get_app_parent(App) ->
+    [{_, AppParent}] = ?Syn:parent(App),
+    {AppParent, App}
+.
+
+get_form_index(File, App) ->
+    Form = ?Query:exec1(App, ?Query:seq([?Expr:clause(), ?Clause:funcl(), ?Clause:form()]), error),
+    FormFile = ?Query:exec(Form, ?Form:file()),
+    case File of
+        FormFile -> ?Syn:index(File, form, Form);
+        _        -> length(?Query:exec(File, ?File:forms()))
+    end
+.
+
+%%% ============================================================================
+%%% Checks
+
+check_children_number(Node) ->
+    List = ?Query:exec(Node, ?Expr:children()),
+    length(List)
 .
 
 exists_check_function(File) ->
@@ -444,24 +545,6 @@ exists_check_function(File) ->
         _ -> true
     end
 .
-
-form_index(File, Form) ->
-    FormFile = ?Query:exec(Form, ?Form:file()),
-    case File of
-        FormFile -> ?Syn:index(File, form, Form);
-        _        -> length(?Query:exec(File, ?File:forms()))
-    end
-.
-
-
-%%% ============================================================================
-%%% Checks
-
-check_children_number(Node) ->
-    List = ?Query:exec(Node, ?Expr:children()),
-    length(List)
-.
-
 
 %%% ============================================================================
 %%% Error messages
