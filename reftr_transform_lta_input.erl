@@ -416,30 +416,31 @@ multiple_list_to_atom_sanitize(ListOfMod, File) ->
     UniqFormList = lists:uniq(FormIndexList),
     ?d(UniqFormList),
     AppParentList = lists:map(fun({App, _}) -> get_app_parent(App) end, ListOfMod),
-    ?dAppParentList(),
+    ?d(AppParentList),
     [fun() ->
-        NewConstructionList = lists:map(fun({App, Arg}) -> create_new_case(App, Arg) end, ListOfMod), % {CaseSanitizeArgList, NewCase}
+        NewConstructionList = lists:map(fun({App, Arg}) -> create_new_case(App, Arg) end, ListOfMod),
         ?d(NewConstructionList),
         SanitizeFuncForm = create_new_form(),
 
         lists:map(
             fun({{AppParent, App}, {_, NewCase}}) ->
-                    do_something(AppParent, App, NewCase)
+                ?Syn:replace(AppParent, {node, App}, [NewCase])
             end,
             lists:zip(AppParentList, NewConstructionList)
         ),
 
-        %lists:map(fun({AppParent, App, _, NewCase}) -> ?Syn:replace(AppParent, {node, App}, [NewCase]) end, NewConstructionList),
         ?d("SIKER"),
-        % ?Syn:replace(AppParent, {node, App}, [NewCase]),
+
         case CheckFunExists of
             true -> ok;
             false ->
-                %?File:add_form(File, FormIndex + 1, SanitizeFuncForm)
                 lists:map(fun(E) -> ?File:add_form(File, E + 1, SanitizeFuncForm) end, UniqFormList)
         end,
-
-        lists:map(fun({_, _, CaseSanitizeArgList, _}) -> ?Transform:touch(CaseSanitizeArgList) end, NewConstructionList)
+        % [{_, CaseSanitizeArg} | _] = NewConstructionList,
+        % ?d(CaseSanitizeArg),
+        {Parent, _} = lists:last(AppParentList),
+        ?Transform:touch(Parent)
+        %lists:map(fun({_, CaseSanitizeArg}) -> ?Transform:touch(CaseSanitizeArg) end, NewConstructionList)
     end]
 .
 
@@ -450,8 +451,8 @@ list_to_atom_sanitize(App, File, UntrustedArg) -> % több transzforom map vagy l
     CheckFunExists = exists_check_function(File),
     [{_, AppParent}] = ?Syn:parent(App),
     [fun() ->
-        {CaseSanitizeArgList, NewCase} = create_new_case(App, UntrustedArg),
-        ?d(CaseSanitizeArgList),
+        {CaseSanitizeArg, NewCase} = create_new_case(App, UntrustedArg),
+        ?d(CaseSanitizeArg),
         ?d(NewCase),
         SanitizeFuncForm = create_new_form(),
         ?d(SanitizeFuncForm),
@@ -466,38 +467,38 @@ list_to_atom_sanitize(App, File, UntrustedArg) -> % több transzforom map vagy l
                 ?File:add_form(File, FormIndex + 1, SanitizeFuncForm)
         end,
 
-        ?Transform:touch(CaseSanitizeArgList)
+        ?Transform:touch(CaseSanitizeArg)
     end]
 .
 
 create_new_case(App, UntrustedArg) ->
     %--- CRIT CHECK
     {_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
-    CaseSanitizeArgList = ?Syn:create(#expr{type=arglist}, [{esub, CaseSanitizeArg}]),
-    CaseSanitizeApp = ?Syn:create(#expr{type = application}, 
-                            [{esub, [?Syn:construct({atom, size_check})]}, 
-                            {esub, CaseSanitizeArgList}]),
+    ?d(CaseSanitizeArg),
+    CaseSanitizeApp = ?Syn:construct({app, [{atom, size_check}], [CaseSanitizeArg]}),
+    ?d(CaseSanitizeApp),
 
     %--- CASE - TRUE
     {_ , FunctionPart} = lists:keyfind(App, 1, ?Syn:copy(App)),
+    ?d(FunctionPart),
     TrueSanitizePattern = ?Syn:construct({pattern, [{atom, true}], [], [FunctionPart]}),
+    ?d(TrueSanitizePattern),
 
     %--- CASE - FALSE
-    ThrowArgList = ?Syn:create(#expr{type=arglist}, [{esub, ?Syn:construct({string, "Variable criteria not met"})}]),
-    ThrowApp = ?Syn:create(#expr{type = application}, [{esub, [?Syn:construct({atom, throw})]},{esub, ThrowArgList}]),
+    ThrowApp = ?Syn:construct({app, {atom, throw}, [{string, "Variable criteria not met"}]}),
+    ?d(ThrowApp),
     FalseSanitizePattern = ?Syn:construct({pattern, [{atom, false}], [], [ThrowApp]}),
+    ?d(FalseSanitizePattern),
 
     %--- CASE
     NewCase = ?Syn:construct({'case', CaseSanitizeApp, [TrueSanitizePattern, FalseSanitizePattern]}),
-    {CaseSanitizeArgList, NewCase}
+    ?d(NewCase),
+    {CaseSanitizeArg, NewCase}
 .
 
 create_new_form() ->
     %--- SANITIZE FUNCTION
-    SanitizeFuncLeftArgList = ?Syn:create(#expr{type=arglist}, [{esub, ?Syn:construct({var, "X"})}]),
-    SanitizeFuncLeft = ?Syn:create(#expr{type = application}, 
-                            [{esub, [?Syn:construct({atom, length})]}, 
-                            {esub, SanitizeFuncLeftArgList}]),
+    SanitizeFuncLeft = ?Syn:construct({app, {atom, length}, [{var, "X"}]}),
     SanitizeFuncRight = ?Syn:construct({integer, 10000}),
     SanitizeFuncClause = ?Syn:construct({fun_clause, 
                             [{atom, size_check}], 
@@ -506,10 +507,6 @@ create_new_form() ->
                             [{{infix_expr, '<'}, SanitizeFuncLeft, SanitizeFuncRight}]}),
     SanitizeFuncForm = ?Syn:construct({func, [SanitizeFuncClause]}),
     SanitizeFuncForm
-.
-
-do_replace_node(AppParent, App, NewCase) ->
-    ?Syn:replace(AppParent, {node, App}, [NewCase]).
 .
 
 get_app_parent(App) ->
