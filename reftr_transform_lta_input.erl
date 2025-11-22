@@ -420,6 +420,7 @@ multiple_list_to_atom_sanitize(ListOfMod, File) ->
     [fun() ->
         NewConstructionList = lists:map(fun({App, Arg}) -> create_new_case(App, Arg) end, ListOfMod),
         ?d(NewConstructionList),
+        ?d("back from creation"),
         SanitizeFuncForm = create_new_form(),
 
         lists:map(
@@ -429,36 +430,29 @@ multiple_list_to_atom_sanitize(ListOfMod, File) ->
             lists:zip(AppParentList, NewConstructionList)
         ),
 
-        ?d("SIKER"),
-
         case CheckFunExists of
             true -> ok;
             false ->
                 lists:map(fun(E) -> ?File:add_form(File, E + 1, SanitizeFuncForm) end, UniqFormList)
         end,
-        % [{_, CaseSanitizeArg} | _] = NewConstructionList,
-        % ?d(CaseSanitizeArg),
         {Parent, _} = lists:last(AppParentList),
+        % {CaseSanitizeArg, _} = lists:unzip(NewConstructionList),
+        % ?d(CaseSanitizeArg),
         ?Transform:touch(Parent)
-        %lists:map(fun({_, CaseSanitizeArg}) -> ?Transform:touch(CaseSanitizeArg) end, NewConstructionList)
     end]
 .
 
 
 
-list_to_atom_sanitize(App, File, UntrustedArg) -> % több transzforom map vagy lc
+list_to_atom_sanitize(App, File, UntrustedArg) ->
     ?d("--- SANITIZE LIST_TO_ATOM ---"),
     CheckFunExists = exists_check_function(File),
     [{_, AppParent}] = ?Syn:parent(App),
     [fun() ->
         {CaseSanitizeArg, NewCase} = create_new_case(App, UntrustedArg),
-        ?d(CaseSanitizeArg),
-        ?d(NewCase),
         SanitizeFuncForm = create_new_form(),
-        ?d(SanitizeFuncForm),
 
         FormIndex = get_form_index(File, App),
-        ?d(FormIndex),
 
         ?Syn:replace(AppParent, {node, App}, [NewCase]),
         case CheckFunExists of
@@ -473,26 +467,23 @@ list_to_atom_sanitize(App, File, UntrustedArg) -> % több transzforom map vagy l
 
 create_new_case(App, UntrustedArg) ->
     %--- CRIT CHECK
-    {_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
+    %{_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
+    CaseSanitizeArg = proplists:get_value(UntrustedArg, ?Syn:copy(UntrustedArg)),
     ?d(CaseSanitizeArg),
-    CaseSanitizeApp = ?Syn:construct({app, [{atom, size_check}], [CaseSanitizeArg]}),
-    ?d(CaseSanitizeApp),
+    CaseSanitizeApp = ?Syn:construct({app, {atom, size_check}, [CaseSanitizeArg]}),
 
     %--- CASE - TRUE
-    {_ , FunctionPart} = lists:keyfind(App, 1, ?Syn:copy(App)),
+    %{_ , FunctionPart} = lists:keyfind(App, 1, ?Syn:copy(App)),
+    FunctionPart = proplists:get_value(App, ?Syn:copy(App)),
     ?d(FunctionPart),
     TrueSanitizePattern = ?Syn:construct({pattern, [{atom, true}], [], [FunctionPart]}),
-    ?d(TrueSanitizePattern),
 
     %--- CASE - FALSE
     ThrowApp = ?Syn:construct({app, {atom, throw}, [{string, "Variable criteria not met"}]}),
-    ?d(ThrowApp),
     FalseSanitizePattern = ?Syn:construct({pattern, [{atom, false}], [], [ThrowApp]}),
-    ?d(FalseSanitizePattern),
 
     %--- CASE
     NewCase = ?Syn:construct({'case', CaseSanitizeApp, [TrueSanitizePattern, FalseSanitizePattern]}),
-    ?d(NewCase),
     {CaseSanitizeArg, NewCase}
 .
 
