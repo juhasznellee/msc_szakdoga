@@ -5,13 +5,13 @@
 t(Module, Name) ->
     list_to_atom("gr_" ++ Module ++ Name).
 
-
 megtalalni1(Xs) ->
-   [t(X, "asd1") || X <- Xs]
+    [t(X, "asd1") || X <- Xs]
 .
+
 megtalalni2(Ys) ->
-   [t(Y, "asd2") || Y <- Ys]
+    [t(Y, "asd2") || Y <- Ys]
 .
 
 % TO
-% "Multiple function called, there is no transformation."
+% This is a recursive function, there is no transformation for that

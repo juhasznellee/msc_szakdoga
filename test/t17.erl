@@ -10,7 +10,7 @@ y([]) ->
     ok.
 
 t() ->
-   y(lists:seq(1, 10)).
+    y(lists:seq(1, 10)).
 
 % TO
 % y([X|Xs]) ->

@@ -20,4 +20,4 @@ megtalalni() ->
 %         false -> throw("Variable criteria not met")
 %     end.
 
-% size_check(X) -> length(X) < 50.
+% size_check(X) -> length(X) < 10000.

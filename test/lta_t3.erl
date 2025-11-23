@@ -12,4 +12,4 @@ t(XS) ->
 %         true -> [list_to_atom(X) || X<-XS];
 %         false -> throw("Variable criteria not met")
 %     end.
-% size_check(X) -> length(X) < 50.
+% size_check(X) -> length(X) < 10000.

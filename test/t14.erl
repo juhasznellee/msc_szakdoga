@@ -8,10 +8,11 @@ set_config_value(Value, atom) -> list_to_atom(Value);
 set_config_value(Value, integer) -> list_to_integer(Value).
 
 cache_os_envvar(Var, Keys, Type) ->
-    [ case os:getenv(Key) of
-          false -> ok;
-          Value -> set_config(Var, set_config_value(Value, Type))
-      end || Key <- Keys ].
+    [case os:getenv(Key) of
+        false -> ok;
+        Value -> set_config(Var, set_config_value(Value, Type))
+    end || Key <- Keys]
+.
 
 
 % TO
@@ -30,4 +31,4 @@ cache_os_envvar(Var, Keys, Type) ->
 %         false -> throw("Variable criteria not met")
 %     end.
 
-% size_check(X) -> length(X) < 50.
+% size_check(X) -> length(X) < 10000.

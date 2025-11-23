@@ -17,3 +17,5 @@ config(Key) when is_atom(Key) ->
 temp(ASD) -> ASD.
 
 % TO
+% No transformation is needed because there is no multiple atom generation.
+% deny

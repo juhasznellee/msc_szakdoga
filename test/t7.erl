@@ -8,6 +8,7 @@ t(XS) ->
 megtalalni() ->
    [t(X) || X <- lists:seq(1, 25)]
 .
+
 % TO
 % t(XS) ->
 %    list_to_atom(lists:append("V", XS)).
@@ -19,4 +20,4 @@ megtalalni() ->
 %         false -> throw("Variable criteria not met")
 %     end.
 
-% size_check(X) -> length(X) < 50.
+% size_check(X) -> length(X) < 10000.

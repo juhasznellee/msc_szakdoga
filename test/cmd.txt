@@ -6,51 +6,53 @@
 	- ri:svg().		| Making a graph out of the test file
 	- ri:build().		| Rebuilds all the modules, just to make sure everything is up to date
 4) Run one of the command for testing the refactoring function. All range are given properly, unless you change the test file content.
-	ri:transform_lta_input(lta_t1,{60,71}).
-	ri:transform_lta_input(lta_t2,{56,67}).
-	ri:transform_lta_input(lta_t3,{56,67}).
-	ri:transform_lta_input(lta_t4,{60,71}).
-	ri:transform_lta_input(lta_t5,{93,104}).
-	ri:transform_lta_input(lta_t6,{63,74}).
-	ri:transform_lta_input(lta_t7,{54,65}).
-	ri:transform_lta_input(lta_t8,{55,66}).
-	ri:transform_lta_input(lta_t9,{59,70}).
-	ri:transform_lta_input(lta_t10,{55,66}).
-	ri:transform_lta_input(lta_t11,{55,66}).
-	ri:transform_lta_input(lta_t12,{55,66}).
-	ri:transform_lta_input(lta_t13,{102,113}).
-	ri:transform_lta_input(lta_t14,{102,113}).
-	ri:transform_lta_input(lta_t15,{60,71}).
-	ri:transform_lta_input(lta_t16,{60,71}).
-	ri:transform_lta_input(lta_t17,{60,71}).
+	[DONE] ri:transform_lta_input(lta_t1,{60,71}).
+	[DONE] ri:transform_lta_input(lta_t2,{56,67}).
+	[DONE] ri:transform_lta_input(lta_t3,{56,67}).
+	[DONE] ri:transform_lta_input(lta_t4,{60,71}).
+	[DONE] ri:transform_lta_input(lta_t5,{93,104}).
+	[DONE] ri:transform_lta_input(lta_t6,{63,74}).
+	[DONE] ri:transform_lta_input(lta_t7,{54,65}).
+	[DONE] ri:transform_lta_input(lta_t8,{55,66}).
+	[DONE] ri:transform_lta_input(lta_t9,{59,70}).
+	[DONE] ri:transform_lta_input(lta_t10,{55,66}).
+	[DONE] ri:transform_lta_input(lta_t11,{55,66}).
+	[DONE] ri:transform_lta_input(lta_t12,{55,66}).
+	[DONE] ri:transform_lta_input(lta_t13,{102,113}).
+	[DONE] ri:transform_lta_input(lta_t14,{102,113}).
+	[DONE] ri:transform_lta_input(lta_t15,{60,71}).
+	[DONE] ri:transform_lta_input(lta_t16,{60,71}).
+	[DONE] ri:transform_lta_input(lta_t17,{60,71}).
+	[DONE] ri:transform_lta_input(lta_t18,{229,240}).
+	[DONE] ri:transform_lta_input(lta_t19,{493,504}).
 	
-	
-	ri:transform_lta_input(t1,{49,60}).
-	ri:transform_lta_input(t2,{49,60}).
-	ri:transform_lta_input(t3,{50,61}).
-	ri:transform_lta_input(t4,{49,60}).
-	ri:transform_lta_input(t6,{51,62}).
-	ri:transform_lta_input(t7,{50,61}).
-	ri:transform_lta_input(t8,{51,62}).
-	ri:transform_lta_input(t9,{49,60}).
-	ri:transform_lta_input(t10,{51,62}).
-	ri:transform_lta_input(t11,{51,62}).
-	ri:transform_lta_input(t12,{51,62}).
-	ri:transform_lta_input(t13,{136,147}).
-	ri:transform_lta_input(t13,{187,198}).
-	ri:transform_lta_input(t14,{187,198}).
-	ri:transform_lta_input(t15,{62,73}).
-	ri:transform_lta_input(t16,{52,63}).
-	ri:transform_lta_input(t17,{59,60}).
+	[DONE] ri:transform_lta_input(t1,{49,60}).
+	[DONE] ri:transform_lta_input(t2,{49,60}).
+	[DONE] ri:transform_lta_input(t4,{49,60}).
+	[DONE] ri:transform_lta_input(t6,{51,62}).
+	[DONE] ri:transform_lta_input(t7,{50,61}).
+	[DONE] ri:transform_lta_input(t8,{51,62}).
+	[DONE] ri:transform_lta_input(t9,{49,60}).
+	[DONE] ri:transform_lta_input(t10,{51,62}).
+	[DONE] ri:transform_lta_input(t11,{51,62}).
+	[DONE] ri:transform_lta_input(t12,{51,62}).
+	[DONE] ri:transform_lta_input(t13,{136,147}).
+	[DONE] ri:transform_lta_input(t14,{187,198}).
+	[DONE] ri:transform_lta_input(t15,{62,73}).
+	[DONE] ri:transform_lta_input(t16,{52,63}).
+	[DONE] ri:transform_lta_input(t17,{59,60}).
+	[] ri:transform_lta_input(t18,{221,232}).
+	[DONE] ri:transform_lta_input(t19,{132,143}).
+
 	---
-	ri:transform_oscmd_input(oscmd_t1,{60,62}).
-	ri:transform_oscmd_input(oscmd_t2,{57,59}).
+	[DONE] ri:transform_oscmd_input(oscmd_t1,{60,62}).
+	[DONE] ri:transform_oscmd_input(oscmd_t2,{57,59}).
 	---
-	ri:transform_fun_replacement(fun_rep_t1,{58,69}).
-	ri:transform_fun_replacement(fun_rep_t2,{50,63}).
-	ri:transform_fun_replacement(fun_rep_t3,{86,99}).
-	ri:transform_fun_replacement(fun_rep_t4,{86,99}).
+	[DONE] ri:transform_fun_replacement(fun_rep_t1,{58,69}).
+	[DONE] ri:transform_fun_replacement(fun_rep_t2,{50,63}).
+	[DONE] ri:transform_fun_replacement(fun_rep_t3,{86,99}).
+	[DONE] ri:transform_fun_replacement(fun_rep_t4,{86,99}).
 	---
-	ri:transform_spawn_link_err_handle(spawn_link_test,{56,60}).
-	ri:transform_spawn_link_err_handle(spl_test,{73,77}).
+	[DONE] ri:transform_spawn_link_err_handle(spawn_link_test,{88,92}).
+	[DONE] ri:transform_spawn_link_err_handle(spl_test,{73,77}).
 		timer:tc(ri, transform_spawn_link_err_handle, [spl_test, {73,77}], millisecond).

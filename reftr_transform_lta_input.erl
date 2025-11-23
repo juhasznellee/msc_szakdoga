@@ -29,10 +29,10 @@ prepare(Args) ->      %Args: module, range
                     throw(?LocalError(no_multi_atom_gen, []));
                 integer ->
                     throw(?LocalError(no_multi_atom_gen, []));
-                _ -> throw(?LocalError(replacable, []))
+                _ -> throw(?LocalError(no_transformation, []))
             end;
         list_to_existing_atom -> ?LocalError(already_safe, [Name]);
-        _ -> ?LocalError(no_transformation, [Name])
+        _ -> ?LocalError(bad_transformation_name, [Name])
     end   
 .
 
@@ -56,7 +56,7 @@ case_of_infix_expr_arg(App, File, Arg) ->
         false -> 
             case lists:member(?Expr:type(Ch2), [application, cons, variable, infix_expr]) of
                 true -> case_of_infix_expr_child(App, File, Ch2);
-                false -> throw(?LocalError(replacable, []))
+                false -> throw(?LocalError(no_transformation, []))
             end
     end
 .
@@ -69,7 +69,7 @@ case_of_infix_expr_child(App, File, Child) ->
             case ?Expr:type(ChildAppArg) of
                 variable -> 
                     handle_variable_inside_application(App, File, ChildAppArg);
-                _ -> throw(?LocalError(replacable, []))
+                _ -> throw(?LocalError(no_transformation, []))
             end;
         cons ->
             ListCompApp = get_list_comp_part(App),
@@ -103,10 +103,10 @@ case_of_application_arg(App, File, Arg) ->
                 false -> 
                     case lists:member(?Expr:type(Ch2), [application, parenthesis, variable]) of
                         true -> case_of_application_child(App, File, Ch2);
-                        false -> throw(?LocalError(replacable, []))
+                        false -> throw(?LocalError(no_transformation, []))
                     end
             end;
-        _ -> throw(?LocalError(replacable, []))
+        _ -> throw(?LocalError(no_transformation, []))
     end
 .
 
@@ -122,9 +122,9 @@ case_of_application_child(App, File, Child) ->
                 1 -> 
                     NextChild = ?Query:exec1(Child, ?Expr:child(1), error),
                     handle_variable_inside_application(App, File, NextChild);
-                _ -> throw(?LocalError(replacable, [])) 
+                _ -> throw(?LocalError(no_transformation, [])) 
             end;
-        _ -> throw(?LocalError(replacable, []))    
+        _ -> throw(?LocalError(no_transformation, []))    
     end
 .
 
@@ -143,13 +143,13 @@ handle_variable_inside_application(App, File, Child) ->
                             ListCompApp = get_list_comp_part(App),
                             list_to_atom_sanitize(ListCompApp, File, DepsOrFlow);
                         pattern -> find_var_called_by_func(DepsOrFlow, File, App);
-                        _ -> throw(?LocalError(replacable, []))
+                        _ -> throw(?LocalError(no_transformation, []))
                     end;
                 0 -> % rekurzív külső hívás - t16.erl | lta_t16
                     find_var_called_by_func(DepsOrFlow, File, App);
-                _ -> throw(?LocalError(replacable, []))
+                _ -> throw(?LocalError(no_transformation, []))
             end;
-        _ -> throw(?LocalError(replacable, []))
+        _ -> throw(?LocalError(no_transformation, []))
     end
 .
 
@@ -169,7 +169,7 @@ case_of_variable_arg(App, File, Arg) ->
                         expr -> % --------------------- t3.erl ---------------------
                                 ListCompApp = get_list_comp_part(App),
                                 list_to_atom_sanitize(ListCompApp, File, DepsOrFlow);
-                        _ -> throw(?LocalError(replacable, []))
+                        _ -> throw(?LocalError(no_transformation, []))
                     end;
                 tuple ->
                     case ?Expr:role(DepsOrFlow) of
@@ -195,14 +195,39 @@ case_of_variable_arg(App, File, Arg) ->
                                                     Child2 = ?Query:exec1(ParentOfFunExpr, ?Expr:child(2), error),  % UntrustedArg
                                                     ?d(Child2),
                                                     list_to_atom_sanitize(MapAppParent, File, Child2);
-                                                _ -> throw(?LocalError(replacable, []))
+                                                _ -> throw(?LocalError(no_transformation, []))
                                             end;
-                                        _ -> throw(?LocalError(replacable, []))
+                                        _ -> throw(?LocalError(no_transformation, []))
                                     end;
-                                fundef -> find_var_called_by_func(ExprClause, File, App); %throw(?LocalError(recursive, []));
-                                _ -> throw(?LocalError(replacable, []))
+                                fundef -> throw(?LocalError(recursive, []));
+                                block ->
+                                    BlockExpr = ?Query:exec(ExprClause, ?Clause:clauseof()),
+                                    ?d(BlockExpr),
+                                    case length(BlockExpr) of
+                                        1 ->
+                                            ListComp = ?Query:exec(hd(BlockExpr), [cons_e]),
+                                            ?d(ListComp),
+                                            case length(ListComp) of
+                                                1 ->
+                                                    ListCompWithOList = hd(ListComp),
+                                                    case ?Expr:type(ListCompWithOList) of
+                                                        list_comp -> 
+                                                            ArgApp = ?Query:exec1(DepsOrFlow, reflib_dataflow:flow_back(), error),
+                                                            ?d(ArgApp),
+                                                            ArgPattern = ?Query:exec1(?Query:exec1(ArgApp, ?Expr:child(2), error), ?Expr:child(1), error),
+                                                            ?d(ArgPattern),
+                                                            BlockVar = ?Query:exec1(ArgPattern, reflib_dataflow:flow_back(), error),
+                                                            ?d(BlockVar),
+                                                            list_to_atom_sanitize(ListCompWithOList, File, BlockVar);
+                                                        _ -> throw(?LocalError(no_transformation, []))
+                                                    end;
+                                                _ -> throw(?LocalError(no_transformation, []))  
+                                            end;
+                                        _ -> throw(?LocalError(no_transformation, []))  
+                                    end;
+                                _ -> throw(?LocalError(no_transformation, []))
                             end;
-                        _ -> throw(?LocalError(replacable, []))    
+                        _ -> throw(?LocalError(no_transformation, []))    
                     end;
                 cons -> % --------------------- t4.erl ---------------------
                     ListCompApp = get_list_comp_part(App),
@@ -246,9 +271,9 @@ case_of_variable_arg(App, File, Arg) ->
                                                     case_of_application_arg(FoldlAppParent, File, Child3ArgApp);
                                                 _ -> list_to_atom_sanitize(FoldlAppParent, File, Child3)
                                             end;
-                                        false -> throw(?LocalError(replacable, []))
+                                        false -> throw(?LocalError(no_transformation, []))
                                     end;
-                                _ -> throw(?LocalError(replacable, []))
+                                _ -> throw(?LocalError(no_transformation, []))
                             end;
                         fundef -> find_var_called_by_func(DepsOrFlow, File, App); %throw(?LocalError(recursive, []));  % t15.erl | lta_t15.erl
                         pattern ->
@@ -265,7 +290,7 @@ case_of_variable_arg(App, File, Arg) ->
                                                 true ->
                                                     throw(?LocalError(no_multi_atom_gen, []));
                                                 false -> 
-                                                    throw(?LocalError(replacable, []))
+                                                    throw(?LocalError(no_transformation, []))
                                             end;
                                         2 ->
                                             Ch1 = ?Query:exec1(?Query:exec1(PatternFlow, ?Expr:child(2), error), ?Expr:child(1), error),
@@ -277,24 +302,24 @@ case_of_variable_arg(App, File, Arg) ->
                                                 false -> 
                                                     case lists:member(?Expr:type(Ch2), [atom, string, integer]) of
                                                         true -> throw(?LocalError(no_multi_atom_gen, []));
-                                                        false -> throw(?LocalError(replacable, []))
+                                                        false -> throw(?LocalError(no_transformation, []))
                                                     end
                                             end;
-                                        _ -> throw(?LocalError(replacable, []))
+                                        _ -> throw(?LocalError(no_transformation, []))
                                     end;
                                 atom -> throw(?LocalError(no_multi_atom_gen, []));
-                                _ -> throw(?LocalError(replacable, []))
+                                _ -> throw(?LocalError(no_transformation, []))
                             end;
-                        _ -> throw(?LocalError(replacable, []))
+                        _ -> throw(?LocalError(no_transformation, []))
                     end;
-                _ -> throw(?LocalError(replacable, []))
+                _ -> throw(?LocalError(no_transformation, []))
             end;
-        _ -> throw(?LocalError(replacable, []))
+        _ -> throw(?LocalError(no_transformation, []))
     end
 .
 
 find_var_called_by_func(Flow, File, App) ->
-    ?d(?Expr:type(Flow)),
+    ?d(Flow),
     NewFunFlow = ?Query:exec1(Flow, reflib_dataflow:flow_back(), error),
     ?d(NewFunFlow),
     NewFunVar =  ?Query:exec(NewFunFlow, [{call, back}]),
@@ -306,13 +331,17 @@ find_var_called_by_func(Flow, File, App) ->
                 application -> 
                     ListGen = ?Query:exec1(?Query:exec1(NewFunFlow, ?Expr:parent(), error), ?Expr:parent(), error),
                     ?d(ListGen),
-                    NewListCompApp = get_list_comp_part(ListGen),
-                    ?d(NewListCompApp),
-                    [_HexprClause, ComprClause] = ?Query:exec(ListGen,?Expr:clauses()),
-                    ?d(ComprClause),
-                    Untrusted = ?Query:exec1(ComprClause, ?Clause:body(), error),
-                    ?d(Untrusted),
-                    list_to_atom_sanitize(NewListCompApp, File, Untrusted);
+                    case ?Expr:type(ListGen) of
+                        list_gen -> 
+                            NewListCompApp = get_list_comp_part(ListGen),
+                            ?d(NewListCompApp),
+                            [_HexprClause, ComprClause] = ?Query:exec(ListGen,?Expr:clauses()),
+                            ?d(ComprClause),
+                            Untrusted = ?Query:exec1(ComprClause, ?Clause:body(), error),
+                            ?d(Untrusted),
+                            list_to_atom_sanitize(NewListCompApp, File, Untrusted);
+                        _ -> throw(?LocalError(no_transformation, [])) %case_of_application_arg(App, File, NewFunFlow);
+                    end;
                 _ -> throw(?LocalError(no_fun_call, []))
             end;
         1 -> % t16.erl | t17.erl
@@ -333,25 +362,36 @@ find_var_called_by_func(Flow, File, App) ->
                             end;
                         0 -> find_var_called_by_func(NewDepsOrFlow, File, App) %lta_t16.erl | t14.erl
                     end;
-                _ -> throw(?LocalError(replacable, []))
+                _ -> throw(?LocalError(no_transformation, []))
             end;
-        _ ->
-            NewList = lists:map(fun(E) -> get_nodes_to_modify(E) end, NewFunVar),
-            ?d(NewList),
-            multiple_list_to_atom_sanitize(NewList, File)
-            % NewFunVarApp = lists:filter(fun(E) -> ?Expr:type(E) == application end, NewFunVar),
-            % ?d(NewFunVarApp),
-            % case length(NewFunVarApp) of
-            %     1 -> 
-            %         FunCall = ?Query:exec1(?Query:exec1(hd(NewFunVarApp), ?Expr:parent(), error), ?Expr:parent(), error),
-            %         ?d(FunCall),
-            %         list_to_atom_sanitize(FunCall, File, hd(NewFunVarApp)); % t17.erl
-            %     _ -> throw(?LocalError(multi_fun_call, [])) % t15.erl
-            % end
+        _ -> 
+            NewFunVarApp = lists:filter(fun(E) -> ?Expr:type(E) == application end, NewFunVar),
+            ?d(NewFunVarApp),
+            case length(NewFunVarApp) of
+                1 -> % simple recursive
+                    FunCall = ?Query:exec1(?Query:exec1(hd(NewFunVarApp), ?Expr:parent(), error), ?Expr:parent(), error),
+                    ?d(FunCall),
+                    list_to_atom_sanitize(FunCall, File, hd(NewFunVarApp)); % t17.erl
+                _ -> % complex calls
+                    NodesToModify = [ E || E <- lists:map(fun(E) -> get_nodes_to_modify(E) end, NewFunVar), E =/= false],
+                    ?d(NodesToModify),
+                    case need_to_transform(NodesToModify) of
+                        [] ->
+                            throw(?LocalError(no_multi_atom_gen, []));
+                        ModList ->
+                            throw(?LocalError(multi_fun_call, []))
+                            %multiple_list_to_atom_sanitize(NewList, File)
+                    end
+            end
     end
 .
 
+need_to_transform(ListOfNodes) ->
+    lists:filter(fun({_, Arg}) -> not lists:member(?Expr:type(Arg), [atom, string, integer, tuple]) end, ListOfNodes).
+
 get_nodes_to_modify(Node) ->
+    ?d(?Expr:value(Node)),
+    ?d(?Expr:type(Node)),
     case ?Expr:type(Node) of
         variable ->
             NewApp = ?Query:exec1(?Query:exec1(Node, ?Expr:parent(), error), ?Expr:parent(), error),
@@ -365,15 +405,14 @@ get_nodes_to_modify(Node) ->
                             {ListCompApp, DepsOrFlow};
                         _ -> {NewApp, DepsOrFlow}
                     end;
-                0 -> {NewApp, DepsOrFlow}
+                0 -> false
             end;
         application ->
             FunCall = ?Query:exec1(?Query:exec1(Node, ?Expr:parent(), error), ?Expr:parent(), error),
             {FunCall, Node};
-        _ -> throw(?LocalError(replacable, []))
+        _ -> false
     end
 .
-
 
 get_flow_deps(Arg) ->
     Flow = ?Query:exec1(Arg, reflib_dataflow:flow_back(), error),
@@ -409,38 +448,35 @@ get_list_comp_part(App) ->
 %%% ============================================================================
 %%% Sanitize
 
-multiple_list_to_atom_sanitize(ListOfMod, File) ->
-    CheckFunExists = exists_check_function(File),
-    FormIndexList = lists:map(fun({App, _}) -> get_form_index(File, App) end, ListOfMod),
-    ?d(FormIndexList),
-    UniqFormList = lists:uniq(FormIndexList),
-    ?d(UniqFormList),
-    AppParentList = lists:map(fun({App, _}) -> get_app_parent(App) end, ListOfMod),
-    ?d(AppParentList),
-    [fun() ->
-        NewConstructionList = lists:map(fun({App, Arg}) -> create_new_case(App, Arg) end, ListOfMod),
-        ?d(NewConstructionList),
-        ?d("back from creation"),
-        SanitizeFuncForm = create_new_form(),
+% multiple_list_to_atom_sanitize(ListOfMod, File) ->
+%     CheckFunExists = exists_check_function(File),
+%     FormIndexList = lists:map(fun({App, _}) -> get_form_index(File, App) end, ListOfMod),
+%     ?d(FormIndexList),
+%     UniqFormList = lists:uniq(FormIndexList),
+%     ?d(UniqFormList),
+%     AppParentList = lists:map(fun({App, _}) -> get_app_parent(App) end, ListOfMod),
+%     ?d(AppParentList),
+%     [fun() ->
+%         NewConstructionList = lists:map(fun({App, Arg}) -> create_new_case(App, Arg) end, ListOfMod),
+%         ?d(NewConstructionList),
+%         SanitizeFuncForm = create_new_form(),
 
-        lists:map(
-            fun({{AppParent, App}, {_, NewCase}}) ->
-                ?Syn:replace(AppParent, {node, App}, [NewCase])
-            end,
-            lists:zip(AppParentList, NewConstructionList)
-        ),
+%         lists:map(
+%             fun({{AppParent, App}, {_, NewCase}}) ->
+%                 ?Syn:replace(AppParent, {node, App}, [NewCase])
+%             end,
+%             lists:zip(AppParentList, NewConstructionList)
+%         ),
 
-        case CheckFunExists of
-            true -> ok;
-            false ->
-                lists:map(fun(E) -> ?File:add_form(File, E + 1, SanitizeFuncForm) end, UniqFormList)
-        end,
-        {Parent, _} = lists:last(AppParentList),
-        % {CaseSanitizeArg, _} = lists:unzip(NewConstructionList),
-        % ?d(CaseSanitizeArg),
-        ?Transform:touch(Parent)
-    end]
-.
+%         case CheckFunExists of
+%             true -> ok;
+%             false ->
+%                 lists:map(fun(E) -> ?File:add_form(File, E + 1, SanitizeFuncForm) end, UniqFormList)
+%         end,
+%         {Parent, _} = lists:last(AppParentList),
+%         ?Transform:touch(Parent)
+%     end]
+% .
 
 
 
@@ -469,13 +505,11 @@ create_new_case(App, UntrustedArg) ->
     %--- CRIT CHECK
     %{_ , CaseSanitizeArg} = lists:keyfind(UntrustedArg, 1, ?Syn:copy(UntrustedArg)),
     CaseSanitizeArg = proplists:get_value(UntrustedArg, ?Syn:copy(UntrustedArg)),
-    ?d(CaseSanitizeArg),
     CaseSanitizeApp = ?Syn:construct({app, {atom, size_check}, [CaseSanitizeArg]}),
 
     %--- CASE - TRUE
     %{_ , FunctionPart} = lists:keyfind(App, 1, ?Syn:copy(App)),
     FunctionPart = proplists:get_value(App, ?Syn:copy(App)),
-    ?d(FunctionPart),
     TrueSanitizePattern = ?Syn:construct({pattern, [{atom, true}], [], [FunctionPart]}),
 
     %--- CASE - FALSE
@@ -500,10 +534,10 @@ create_new_form() ->
     SanitizeFuncForm
 .
 
-get_app_parent(App) ->
-    [{_, AppParent}] = ?Syn:parent(App),
-    {AppParent, App}
-.
+% get_app_parent(App) ->
+%     [{_, AppParent}] = ?Syn:parent(App),
+%     {AppParent, App}
+% .
 
 get_form_index(File, App) ->
     Form = ?Query:exec1(App, ?Query:seq([?Expr:clause(), ?Clause:funcl(), ?Clause:form()]), error),
@@ -537,17 +571,17 @@ exists_check_function(File) ->
 %%% ============================================================================
 %%% Error messages
 
-error_text(no_transformation, [Name]) ->
+error_text(bad_transformation_name, [Name]) ->
     ?MISC:format("There is no given transformation for ~p function", [Name]);
 error_text(no_fun_call, []) ->
     ?MISC:format("Function call not found.", []);
 error_text(multi_fun_call, []) ->
-    ?MISC:format("Multiple function called, there is no transformation.", []);
+    ?MISC:format("Multiple functions call the function containing list_to_atom, there is no transformation for this.", []);
 error_text(no_multi_atom_gen, []) ->
-    ?MISC:format("No multiple atom generation.", []);
+    ?MISC:format("No transformation is needed because there is no multiple atom generation.", []);
 error_text(already_safe, [Name]) ->
     ?MISC:format("The ~p function is already safe.", [Name]);
 error_text(recursive, []) ->
-    ?MISC:format("This is a recursive function, there is no transformation.", []);
-error_text(replacable, []) ->
-    ?MISC:format("REPLACE", []).
+    ?MISC:format("This is a recursive function, there is no transformation for that.", []);
+error_text(no_transformation, []) ->
+    ?MISC:format("No transformation for this case.", []).

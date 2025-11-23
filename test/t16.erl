@@ -7,8 +7,7 @@ t(XX) ->
 
 
 megtalalni() ->
-   [t(X) || X <- lists:seq(1, 25)]
-.
+    [t(X) || X<-lists:seq(1, 25)].
 
 % TO
 % t(XX) ->
@@ -21,4 +20,4 @@ megtalalni() ->
 %         ;
 %         false -> throw("Variable criteria not met")
 %     end.
-% size_check(X) -> length(X) < 50.
+% size_check(X) -> length(X) < 10000.
