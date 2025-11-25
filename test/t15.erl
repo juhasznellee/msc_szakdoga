@@ -14,4 +14,4 @@ megtalalni2(Ys) ->
 .
 
 % TO
-% This is a recursive function, there is no transformation for that
+% Multiple functions call the function containing list_to_atom, there is no transformation for this.
