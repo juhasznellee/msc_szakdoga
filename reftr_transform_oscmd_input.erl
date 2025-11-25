@@ -7,7 +7,7 @@
 
 %%% @private
 prepare(Args) ->      %Args: module, range
-    {App, File} = reftr_transform_common:get_application(Args),
+    App = reftr_transform_common:get_application(Args),
     Function = ?Query:exec1(App, ?Expr:function(), error),
     Name = ?Fun:name(Function),
     case Name of
@@ -16,7 +16,7 @@ prepare(Args) ->      %Args: module, range
             case ?Expr:type(Arg) of
                 string -> 
                     throw(?LocalError(already_safe, []));
-                _ -> cmd_input_sanitize(App, File, Arg)
+                _ -> cmd_input_sanitize(App, Arg)
             end;
         _ -> throw(?LocalError(no_transformation, [Name]))
     end
@@ -25,7 +25,8 @@ prepare(Args) ->      %Args: module, range
 %%% ============================================================================
 %%% Untrusted argument sanitize
 
-cmd_input_sanitize(App, File, UntrustedArg) -> 
+cmd_input_sanitize(App, UntrustedArg) -> 
+    File = hd(?Syn:get_file(UntrustedArg)),
     [{_, AppParent}] = ?Syn:parent(App),
     CheckFunExists = exists_check_function(File),
     [fun() ->

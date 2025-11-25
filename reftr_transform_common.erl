@@ -8,19 +8,18 @@
 %%% @private
 get_application(Args) ->      %Args: module, range
     App = ?Args:expr_range(Args),
-    File = ?Args:file(Args),
     Type = ?Expr:type(hd(App)),
     case Type of
-        application -> {App, File};
+        application -> App;
         list_comp -> 
             [HexprClause, _ComprClause] = ?Query:exec(App,?Expr:clauses()),
             ClauseParent = ?Query:exec1(HexprClause, ?Clause:body(), error),
             case ?Expr:type(ClauseParent) of
-                application -> {ClauseParent, File};
+                application -> ClauseParent;
                 infix_expr ->
                     InfixParent = ?Query:exec1(ClauseParent, ?Expr:parent(), error),
                     case ?Expr:type(InfixParent) of
-                        application -> {InfixParent, File};
+                        application -> InfixParent;
                         _ -> throw(?RefErr0r(bad_range)) 
                     end;
                 _ -> throw(?RefErr0r(bad_range)) 
@@ -28,11 +27,11 @@ get_application(Args) ->      %Args: module, range
         atom -> 
             AtomParent = ?Query:exec1(App, ?Expr:parent(), error),
             case ?Expr:type(AtomParent) of
-                application -> {AtomParent, File};
+                application -> AtomParent;
                 infix_expr ->
                     InfixParent = ?Query:exec1(AtomParent, ?Expr:parent(), error),
                     case ?Expr:type(InfixParent) of
-                        application -> {InfixParent, File};
+                        application -> InfixParent;
                         _ -> throw(?RefErr0r(bad_range)) 
                     end;
                 _ -> throw(?RefErr0r(bad_range))
@@ -40,7 +39,7 @@ get_application(Args) ->      %Args: module, range
         infix_expr ->
             InfixParent = ?Query:exec1(App, ?Expr:parent(), error),
             case ?Expr:type(InfixParent) of
-                application -> {InfixParent, File};
+                application -> InfixParent;
                 _ -> throw(?RefErr0r(bad_range)) 
             end;
         _ -> throw(?RefErr0r(bad_range))
