@@ -1,7 +1,7 @@
 -module(reftr_transform_common).
 -vsn("$Rev$").
 
--export([get_application/1]).
+-export([get_application/1, error_text/2]).
 
 -include("user.hrl").
 
@@ -34,6 +34,8 @@ get_application(Args) ->      %Args: module, range
                         application -> InfixParent;
                         _ -> throw(?RefErr0r(bad_range)) 
                     end;
+                implicit_fun ->
+                    throw(?LocalError(no_transformation, []));
                 _ -> throw(?RefErr0r(bad_range))
             end;
         infix_expr ->
@@ -45,3 +47,10 @@ get_application(Args) ->      %Args: module, range
         _ -> throw(?RefErr0r(bad_range))
     end
 .
+
+
+%%% ============================================================================
+%%% Error messages
+
+error_text(no_transformation, []) ->
+    ?MISC:format("No transformation for this case.", []).

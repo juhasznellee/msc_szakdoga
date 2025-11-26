@@ -55,6 +55,7 @@ transform_list_to_existing_atom(App) ->
 %% Transform the binary_to_term function with adding a new 'safe' argument
 transform_binary_to_term_safe(App) ->
     [{_, AppParent}] = ?Syn:parent(App),
+    {InfixBool, Value} = check_is_infix_expr(App),
     ArgList = ?Query:exec1(App, ?Expr:child(2), error),
     Sub = ?Query:exec(ArgList, ?Expr:deep_sub()),
     SafeAtomExists = [E || E <- Sub, ?Expr:value(E) == safe],
@@ -62,17 +63,33 @@ transform_binary_to_term_safe(App) ->
         [] -> ok;
         _ -> throw(?LocalError(already_safe, [binary_to_term]))
     end,
-    Arg1 = ?Query:exec1(ArgList, ?Expr:child(1), error),
+    ArgOne = ?Query:exec1(ArgList, ?Expr:child(1), error),
     [fun() ->
-        FuncAtom = ?Syn:construct({atom, binary_to_term}),
-        NewAtom = ?Syn:construct({atom, safe}),
-        NewList = ?Syn:construct({list, [NewAtom]}),
-        NewCons = ?Syn:construct({cons, [NewList]}),
-        {_ , NewArg} = lists:keyfind(Arg1, 1, ?Syn:copy(Arg1)),
-        NewApp = ?Syn:construct({app, FuncAtom, [NewArg, NewCons]}),
+        NewCons = ?Syn:construct({cons, [{list, [{atom, safe}]}]}),
+        {_ , NewArg} = lists:keyfind(ArgOne, 1, ?Syn:copy(ArgOne)),
+        case InfixBool of
+            true ->
+                NewApp = ?Syn:construct({app, {{infix_expr, ':'}, [{atom, Value}], [{atom, binary_to_term}]}, [NewArg, NewCons]});
+            false -> 
+                NewApp = ?Syn:construct({app, {atom, binary_to_term}, [NewArg, NewCons]})
+        end,
         ?Syn:replace(AppParent, {node, App}, [NewApp]),
         ?Transform:touch(NewArg)
     end]
+.
+
+
+%%% ===========================================================================
+%%% Helper function
+
+check_is_infix_expr(App) ->
+    Child = ?Query:exec1(App, ?Expr:child(1), error),
+    case ?Expr:type(Child) of
+        infix_expr -> 
+            InfixLeft = ?Query:exec1(Child, ?Expr:child(1), error),
+            {true, ?Expr:value(InfixLeft)};
+        _ -> {false, ""}
+    end
 .
 
 

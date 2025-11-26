@@ -22,6 +22,7 @@ prepare(Args) ->      %Args: module, range
     end
 .
 
+
 %%% ============================================================================
 %%% Untrusted argument sanitize
 
@@ -88,6 +89,10 @@ cmd_input_sanitize(App, UntrustedArg) ->
         ?Transform:touch(CaseSanitizeArgList)
     end]
 .
+
+
+%%% ===========================================================================
+%%% Helper functions
 
 exists_check_function(File) ->
     Forms = ?Query:exec(File, ?File:forms()),
