@@ -46,6 +46,8 @@
 	[DONE] ri:transform_fun_replacement(fun_rep_t2,{50,63}).
 	[DONE] ri:transform_fun_replacement(fun_rep_t3,{86,99}).
 	[DONE] ri:transform_fun_replacement(fun_rep_t4,{86,99}).
+	[DONE] ri:transform_fun_replacement(fun_rep_t5,{97,110}).
+	[DONE] ri:transform_fun_replacement(fun_rep_t6,{118,131}).
 	----
 	[DONE] ri:transform_spawn_link_err_handle(spawn_link_test,{88,92}).
 	[DONE] ri:transform_spawn_link_err_handle(spl_test,{73,77}).

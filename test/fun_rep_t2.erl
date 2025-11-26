@@ -2,9 +2,10 @@
 -export([bta/0]).
 
 bta() ->
-    binary_to_existing_atom(<<"Erlang">>, utf8)
+    binary_to_atom(<<"Erlang">>, utf8)
 .
 
 % TO
-% The binary_to_existing_atom function is already safe.
-% deny
+% bta() ->
+%     binary_to_existing_atom(<<"Erlang">>, utf8)
+% .

@@ -4,8 +4,7 @@
 % FROM
 t() ->
     Bin = term_to_binary(hello),
-    binary_to_term(Bin)
-.
+    binary_to_term(Bin).
 
 % TO
 % t() ->

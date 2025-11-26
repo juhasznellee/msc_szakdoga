@@ -18,11 +18,11 @@
 		ri:transform_lta_input(lager_stdlib,{17135,17146}).
 			timer:tc(ri, transform_lta_input, [lager_stdlib, {17135,17146}], millisecond).
 			
-	- lager_util {586,5},{586,17} | 22623 , 22635 -> "No multiple atom generation."
+	- lager_util {586,5},{586,17} | 22623 , 22635 -> "No transformation is needed because there is no multiple atom generation."
 		ri:transform_lta_input(lager_util,{22623,22635}).
 			timer:tc(ri, transform_lta_input, [lager_util, {22623,22635}], millisecond).
 			
-	- lager_transform {285,5},{285,17} | 13162 , 13174 -> "No multiple atom generation."
+	- lager_transform {285,5},{285,17} | 13162 , 13174 -> "No transformation is needed because there is no multiple atom generation."
 		ri:transform_lta_input(lager_transform,{13162,13174}).
 			timer:tc(ri, transform_lta_input, [lager_transform, {13162,13174}], millisecond).			
 			
@@ -52,7 +52,7 @@
 			timer:tc(ri, transform_fun_replacement, [mochiweb_socket_server, {2859,2871}], millisecond).
 
  - II. list_to_atom(2) - SANITIZE | 3562 ms, 687 ms
-	- mochiglobal, {67,5}, {67,17} | 2354 , 2366 -> "No multiple atom generation."
+	- mochiglobal, {67,5}, {67,17} | 2354 , 2366 -> "No transformation is needed because there is no multiple atom generation."
 		ri:transform_lta_input(mochiglobal,{2354,2366}).
 			timer:tc(ri, transform_lta_input, [mochiglobal, {2354,2366}], millisecond).
 			
@@ -145,7 +145,7 @@
 			timer:tc(ri, transform_fun_replacement, [miner_poc_grpc_client_statem, {27163,27175}], millisecond).
 
  - II. list_to_atom(2) - SANITIZE | 28372 ms, 29129 ms
-	- miner_restart_sup, {176,19}, {176,31} | 6139 , 6151 -> "No multiple atom generation."
+	- miner_restart_sup, {176,19}, {176,31} | 6139 , 6151 -> "No transformation is needed because there is no multiple atom generation."
 		ri:transform_lta_input(miner_restart_sup,{6139,6151}).
 			timer:tc(ri, transform_lta_input, [miner_restart_sup, {6139,6151}], millisecond).
 			
@@ -213,7 +213,7 @@
 	- mongoose_graphql_metric_admin_query, {27,5}, {27,19} | 823 , 837
 		ri:transform_fun_replacement(mongoose_graphql_metric_admin_query,{823,837}).
 			timer:tc(ri, transform_fun_replacement, [mongoose_graphql_metric_admin_query, {823,837}], millisecond).
-		- mnesia_api, {32,36}, {32,50} | 1391 , 1405
+	- mnesia_api, {32,36}, {32,50} | 1391 , 1405
 		ri:transform_fun_replacement(mnesia_api,{1391,1405}).
 			timer:tc(ri, transform_fun_replacement, [mnesia_api, {1391,1405}], millisecond).
 	- mongoose_graphql_directive_protected, {75,32}, {75,46} | 3325 , 3339
