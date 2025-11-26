@@ -178,7 +178,15 @@ case_of_variable_arg(App, Arg) ->
                                                             ArgApp = ?Query:exec1(DepsOrFlow, reflib_dataflow:flow_back(), error),
                                                             ArgPattern = ?Query:exec1(?Query:exec1(ArgApp, ?Expr:child(2), error), ?Expr:child(1), error),
                                                             BlockVar = ?Query:exec1(ArgPattern, reflib_dataflow:flow_back(), error),
-                                                            list_to_atom_sanitize(ListCompWithOList, BlockVar);
+                                                            case ?Expr:role(BlockVar) of
+                                                                pattern ->
+                                                                    {NewLength, NewDepsOrFlow} = get_flow_deps(BlockVar),
+                                                                    case NewLength of
+                                                                        1 -> list_to_atom_sanitize(ListCompWithOList, NewDepsOrFlow);
+                                                                        0 -> throw(?LocalError(no_transformation, []))
+                                                                    end;
+                                                                _ -> throw(?LocalError(no_transformation, []))
+                                                            end;
                                                         _ -> throw(?LocalError(no_transformation, []))
                                                     end;
                                                 _ -> throw(?LocalError(no_transformation, []))  
