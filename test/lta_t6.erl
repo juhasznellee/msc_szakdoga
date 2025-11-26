@@ -7,7 +7,6 @@ t() ->
         list_to_atom(filename:basename(XS, ".erl")) || XS <- lists:seq(1, 25)
     ].
 
-
 % TO
 % t() ->
 %     case size_check(lists:seq(1, 25)

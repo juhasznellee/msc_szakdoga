@@ -7,6 +7,5 @@ t(Args) ->
     lists:map(fun binary_to_atom/1, Segments).
 
 % TO
-% t() ->
-%   Bin = term_to_binary(hello),
-%   binary_to_term(Bin, [safe]).
+% No transformation for this case.
+% deny

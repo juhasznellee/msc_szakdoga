@@ -7,7 +7,6 @@ megtalalni() ->
     [lta_t20:t(X) || X <- lists:seq(1, 25)].
 
 % TO
-
 % megtalalni() ->
 %     case size_check(lists:seq(1, 25)) of
 %         true -> [lta_t20:t(X) || X<-lists:seq(1, 25)];

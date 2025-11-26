@@ -31,6 +31,7 @@
 	[DONE] ri:transform_lta_input(t11,{51,62}).
 	[DONE] ri:transform_lta_input(t12,{51,62}).
 	[DONE] ri:transform_lta_input(t13,{136,147}).
+	[DONE] ri:transform_lta_input(t14,{187,198}).
 	[DONE] ri:transform_lta_input(t15,{62,73}).
 	[DONE] ri:transform_lta_input(t16,{52,63}).
 	[DONE] ri:transform_lta_input(t17,{59,60}).

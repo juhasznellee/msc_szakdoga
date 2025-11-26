@@ -14,7 +14,6 @@ cache_os_envvar(Var, Keys, Type) ->
     end || Key <- Keys]
 .
 
-
 % TO
 % set_config_value(Value, string) -> Value;
 % set_config_value(Value, binary) -> list_to_binary(Value);
@@ -27,7 +26,8 @@ cache_os_envvar(Var, Keys, Type) ->
 %             [case os:getenv(Key) of
 %                 false -> ok;
 %                 Value -> set_config(Var, set_config_value(Value, Type))
-%             end || Key<-Keys];
+%             end || Key<-Keys]
+%         ;
 %         false -> throw("Variable criteria not met")
 %     end.
 

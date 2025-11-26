@@ -7,3 +7,4 @@ t() ->
 
 % TO
 % "No need for transformation, the function is safe."
+% deny
