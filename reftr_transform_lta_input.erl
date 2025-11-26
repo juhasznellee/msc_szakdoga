@@ -271,7 +271,7 @@ find_var_called_by_func(Flow, App) ->
         0 -> % t14.erl
             case ?Expr:type(NewFunFlow) of
                 application ->
-                    ListGen = ?Query:exec1(?Query:exec1(NewFunFlow, ?Expr:parent(), error), ?Expr:parent(), throw(?LocalError(no_transformation, []))),
+                    ListGen = ?Query:exec1(?Query:exec1(NewFunFlow, ?Expr:parent(), error), ?Expr:parent(), ?LocalError(no_transformation, [])),
                     case ?Expr:type(ListGen) of
                         list_gen -> 
                             NewListCompApp = get_list_comp_part(ListGen),

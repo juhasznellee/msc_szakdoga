@@ -25,7 +25,7 @@ get_application(Args) ->      %Args: module, range
                 _ -> throw(?RefErr0r(bad_range)) 
             end;
         atom -> 
-            AtomParent = ?Query:exec1(App, ?Expr:parent(), error),
+            AtomParent = ?Query:exec1(App, ?Expr:parent(), ?LocalError(no_transformation, [])),
             case ?Expr:type(AtomParent) of
                 application -> AtomParent;
                 infix_expr ->
