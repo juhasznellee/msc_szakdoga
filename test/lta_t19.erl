@@ -55,4 +55,4 @@ fetch_config(_UpdatedKeys, _ValIP, _ValGRPCPort) ->
 %                     {error, Reason}
 %             end
 %     end.
-% size_check(X) -> length(X) < 10000.
+% size_check(X) -> length(X) < 5000000.

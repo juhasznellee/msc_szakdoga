@@ -16,4 +16,4 @@ get_module_proc(Host, Base) ->
 % get_module_proc(Host, Base) ->
 %     list_to_atom(atom_to_list(Base) ++ "_" ++ Host).
 
-% size_check(X) -> length(X) < 10000.
+% size_check(X) -> length(X) < 5000000.

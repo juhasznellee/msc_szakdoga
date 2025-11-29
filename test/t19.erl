@@ -25,4 +25,4 @@ t(Keys) ->
 %             ];
 %         false -> throw("Variable criteria not met")
 %     end.
-% size_check(X) -> length(X) < 10000.
+% size_check(X) -> length(X) < 5000000.

@@ -14,4 +14,4 @@ megtalalni() ->
 %     end.
 
 % % TO
-% size_check(X) -> length(X) < 10000.
+% size_check(X) -> length(X) < 5000000.
