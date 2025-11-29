@@ -7,7 +7,7 @@
 
 %%% @private
 prepare(Args) ->      %Args: module, range
-    App = reftr_transform_common:get_application(Args),
+    App = reftr_transform_common:get_application_node_from_arg(Args),
     Function = ?Query:exec1(App, ?Expr:function(), error),
     Name = ?Fun:name(Function),
     case Name of
@@ -385,7 +385,7 @@ create_new_case(App, UntrustedArg) ->
 create_new_form() ->
     %--- SANITIZE FUNCTION
     SanitizeFuncLeft = ?Syn:construct({app, {atom, length}, [{var, "X"}]}),
-    SanitizeFuncRight = ?Syn:construct({integer, 10000}),
+    SanitizeFuncRight = ?Syn:construct({integer, 5000000}),
     SanitizeFuncClause = ?Syn:construct({fun_clause, 
                             [{atom, size_check}], 
                             [{var_pattern, "X"}], 

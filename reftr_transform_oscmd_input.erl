@@ -7,7 +7,7 @@
 
 %%% @private
 prepare(Args) ->      %Args: module, range
-    App = reftr_transform_common:get_application(Args),
+    App = reftr_transform_common:get_application_node_from_arg(Args),
     Function = ?Query:exec1(App, ?Expr:function(), error),
     Name = ?Fun:name(Function),
     case Name of

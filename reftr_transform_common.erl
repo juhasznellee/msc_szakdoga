@@ -1,16 +1,16 @@
 -module(reftr_transform_common).
 -vsn("$Rev$").
 
--export([get_application/1, error_text/2]).
+-export([get_application_node_from_arg/1, error_text/2]).
 
 -include("user.hrl").
 
 %%% @private
-get_application(Args) ->      %Args: module, range
+get_application_node_from_arg(Args) ->      %Args: module, range
     App = ?Args:expr_range(Args),
     Type = ?Expr:type(hd(App)),
     case Type of
-        application -> App;
+        application -> hd(App);
         list_comp -> 
             [HexprClause, _ComprClause] = ?Query:exec(App,?Expr:clauses()),
             ClauseParent = ?Query:exec1(HexprClause, ?Clause:body(), error),
@@ -42,6 +42,12 @@ get_application(Args) ->      %Args: module, range
             InfixParent = ?Query:exec1(App, ?Expr:parent(), error),
             case ?Expr:type(InfixParent) of
                 application -> InfixParent;
+                _ -> throw(?RefErr0r(bad_range)) 
+            end;
+        cons ->
+            ConsApp = ?Query:exec1(App, [{cons_e, back}], error),
+            case ?Expr:type(ConsApp) of
+                application -> ConsApp;
                 _ -> throw(?RefErr0r(bad_range)) 
             end;
         _ -> throw(?RefErr0r(bad_range))
