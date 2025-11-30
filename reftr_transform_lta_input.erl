@@ -273,7 +273,7 @@ case_of_variable_arg(App, Arg) ->
 
 %% If the untrusted argument comes from an outer function
 find_var_called_by_func(Flow, App) ->
-    NewFunFlow = ?Query:exec1(Flow, reflib_dataflow:flow_back(), error),
+    NewFunFlow = ?Query:exec1(Flow, reflib_dataflow:flow_back(), ?LocalError(no_transformation, [])),
     NewFunVar =  ?Query:exec(NewFunFlow, [{call, back}]),
     case length(NewFunVar) of
         0 -> % t14.erl
