@@ -1,4 +1,4 @@
--module(sp_t2).
+-module(sl_t2).
 -export([get_max_num_spawn2/0]).
 
 % FROM

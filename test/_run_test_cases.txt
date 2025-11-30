@@ -50,8 +50,8 @@
 	[DONE] ri:transform_fun_replacement(fun_rep_t5,{97,110}).
 	[DONE] ri:transform_fun_replacement(fun_rep_t6,{118,131}).
 	----
-	[DONE] ri:transform_spawn_link_err_handle(sp_t1,{92,96}).
-	[DONE] ri:transform_spawn_link_err_handle(sp_t2,{92,96}).
-	[DONE] ri:transform_spawn_link_err_handle(sp_t3,{92,96}).
-	[DONE] ri:transform_spawn_link_err_handle(sp_t4,{92,96}).
+	[DONE] ri:transform_spawn_link_err_handle(sl_t1,{92,96}).
+	[DONE] ri:transform_spawn_link_err_handle(sl_t2,{92,96}).
+	[DONE] ri:transform_spawn_link_err_handle(sl_t3,{92,96}).
+	[DONE] ri:transform_spawn_link_err_handle(sl_t4,{92,96}).
 	[DONE] ri:transform_spawn_link_err_handle(spl_test,{73,77}).
