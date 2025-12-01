@@ -1,3 +1,8 @@
+	[DONE] ri:transform_lta_input(lta1,{76,87}).
+	[DONE] ri:transform_lta_input(lta2,{83,94}).
+	[DONE] ri:transform_lta_input(lta3,{91,102}).
+	[DONE] ri:transform_lta_input(lta4,{106,117}).
+	----
 	[DONE] ri:transform_lta_input(lta_t1,{60,71}).
 	[DONE] ri:transform_lta_input(lta_t2,{56,67}).
 	[DONE] ri:transform_lta_input(lta_t3,{56,67}).
